@@ -1,0 +1,5 @@
+{
+  "name": "TimeOS Dashboard",
+  "description": "A premium SaaS-style digital clock dashboard with timezones, stopwatch, timer, and system widgets.",
+  "requestFramePermissions": []
+}
