@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Logo } from './components/Logo';
 import { 
   Clock, 
   Globe, 
@@ -25,7 +24,14 @@ import {
   Trash2,
   Battery,
   Wifi,
-  Cpu
+  Cpu,
+  Cloud,
+  CloudRain,
+  CloudLightning,
+  Wind,
+  Droplets,
+  Thermometer,
+  MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -40,6 +46,93 @@ interface Todo {
   id: string;
   text: string;
   completed: boolean;
+}
+
+// --- Components ---
+function WeatherWidget({ weather, locationName, isDarkMode }: { weather: any, locationName: string, isDarkMode: boolean }) {
+  if (!weather) {
+    return (
+      <div className="glass-card p-8 rounded-[32px] flex flex-col items-center justify-center text-center animate-pulse">
+        <div className="w-12 h-12 bg-slate-700/20 rounded-full mb-4" />
+        <div className="h-4 w-24 bg-slate-700/20 rounded mb-2" />
+        <div className="h-8 w-16 bg-slate-700/20 rounded" />
+      </div>
+    );
+  }
+
+  const current = weather.current;
+  const daily = weather.daily;
+  
+  const getWeatherIcon = (code: number) => {
+    if (code <= 3) return <Sun className="text-yellow-500" size={48} />;
+    if (code <= 48) return <Cloud className="text-slate-400" size={48} />;
+    if (code <= 67) return <CloudRain className="text-blue-400" size={48} />;
+    if (code <= 77) return <CloudRain className="text-blue-200" size={48} />;
+    if (code <= 82) return <CloudRain className="text-blue-500" size={48} />;
+    if (code <= 99) return <CloudLightning className="text-purple-500" size={48} />;
+    return <Sun className="text-yellow-500" size={48} />;
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="glass-card p-8 rounded-[32px] flex flex-col justify-between relative overflow-hidden group"
+    >
+      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+        {getWeatherIcon(current.weather_code)}
+      </div>
+      
+      <div>
+        <div className="flex items-center gap-2 mb-6">
+          <MapPin size={16} className="text-blue-500" />
+          <span className="text-sm font-bold tracking-wider uppercase text-slate-400">{locationName}</span>
+        </div>
+        
+        <div className="flex items-end gap-2 mb-8">
+          <span className="text-6xl font-black tracking-tighter tabular-nums">
+            {Math.round(current.temperature_2m)}°
+          </span>
+          <span className="text-xl text-slate-500 font-medium mb-2">Celsius</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+            <Thermometer size={18} className="text-orange-400" />
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-500 uppercase font-bold">Feels Like</span>
+              <span className="text-sm font-bold">{Math.round(current.apparent_temperature)}°</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+            <Droplets size={18} className="text-blue-400" />
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-500 uppercase font-bold">Humidity</span>
+              <span className="text-sm font-bold">{current.relative_humidity_2m}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 pt-8 border-t border-white/5">
+        <div className="flex justify-between items-center">
+          {daily.time.slice(1, 4).map((date: string, i: number) => (
+            <div key={date} className="flex flex-col items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">
+                {new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(date))}
+              </span>
+              <div className="scale-75">
+                {getWeatherIcon(daily.weather_code[i+1])}
+              </div>
+              <span className="text-xs font-black">
+                {Math.round(daily.temperature_2m_max[i+1])}°
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 // --- Constants ---
@@ -87,6 +180,11 @@ export default function App() {
   // System Info State
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Weather State
+  const [weather, setWeather] = useState<any>(null);
+  const [location, setLocation] = useState<{lat: number, lon: number} | null>(null);
+  const [locationName, setLocationName] = useState('Detecting location...');
 
   // Sticky Note State
   const [stickyNote, setStickyNote] = useState(() => localStorage.getItem('stickyNote') || 'Welcome to TimeOS! Write your notes here...');
@@ -158,6 +256,44 @@ export default function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Weather Fetching
+  useEffect(() => {
+    const fetchWeather = async (lat: number, lon: number) => {
+      try {
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`
+        );
+        const data = await response.json();
+        setWeather(data);
+        
+        // Reverse geocoding (approximate)
+        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+        const geoData = await geoResponse.json();
+        setLocationName(geoData.address.city || geoData.address.town || geoData.address.village || 'Unknown Location');
+      } catch (error) {
+        console.error('Error fetching weather:', error);
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ lat: latitude, lon: longitude });
+          fetchWeather(latitude, longitude);
+        },
+        () => {
+          // Fallback to London if geolocation fails
+          const lat = 51.5074;
+          const lon = -0.1278;
+          setLocation({ lat, lon });
+          fetchWeather(lat, lon);
+          setLocationName('London (Default)');
+        }
+      );
+    }
   }, []);
 
   // --- Handlers ---
@@ -308,10 +444,17 @@ export default function App() {
       <aside 
         className={`glass-card h-full border-r transition-all duration-300 flex flex-col z-50 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}
       >
-        <div className="p-6 flex flex-col items-center gap-4">
-          <Logo className="scale-75 origin-top" showText={!sidebarCollapsed} />
+        <div className="p-6 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 select-none">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black italic">T</div>
+            {!sidebarCollapsed && (
+              <span className="text-xl font-black tracking-tighter italic">
+                TIME<span className="text-blue-500">OS</span>
+              </span>
+            )}
+          </div>
           {!sidebarCollapsed && (
-            <span className="text-sm font-medium text-slate-400 tracking-[0.2em] uppercase text-center">
+            <span className="text-[8px] font-medium text-slate-500 tracking-[0.3em] uppercase text-center mt-1">
               by safikul islam
             </span>
           )}
@@ -426,22 +569,36 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-8"
               >
-                {/* Hero Clock Card */}
-                <motion.section 
-                  className="glass-card p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden animate-float"
-                >
-                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
-                  <Logo className="scale-110 mb-8" />
-                  <span className="text-blue-500 font-semibold tracking-widest uppercase text-xs mb-4">
-                    {getGreeting()}
-                  </span>
-                  <h1 className="text-7xl md:text-9xl font-bold tracking-tighter clock-glow mb-4 tabular-nums">
-                    {formatTime(time)}
-                  </h1>
-                  <p className="text-xl text-slate-400 font-medium">
-                    {formatDate(time)}
-                  </p>
-                </motion.section>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Hero Clock Card */}
+                  <motion.section 
+                    className="lg:col-span-2 glass-card p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10 opacity-50" />
+                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700" />
+                    <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all duration-700" />
+                    
+                    <span className="relative z-10 text-blue-500 font-black tracking-[0.5em] uppercase text-[10px] mb-6 animate-pulse">
+                      {getGreeting()}
+                    </span>
+                    <h1 className="relative z-10 text-8xl md:text-[10rem] font-black tracking-tighter leading-none mb-6 tabular-nums drop-shadow-2xl">
+                      {formatTime(time).split(' ')[0]}
+                    </h1>
+                    <div className="relative z-10 flex items-center gap-4">
+                      <p className="text-xl text-slate-400 font-light tracking-[0.3em] uppercase">
+                        {formatDate(time)}
+                      </p>
+                      {!is24Hour && (
+                        <span className="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-500 text-xs font-black uppercase tracking-widest">
+                          {time.getHours() >= 12 ? 'PM' : 'AM'}
+                        </span>
+                      )}
+                    </div>
+                  </motion.section>
+
+                  {/* Weather Widget */}
+                  <WeatherWidget weather={weather} locationName={locationName} isDarkMode={isDarkMode} />
+                </div>
 
                 {/* Timezone Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -580,12 +737,12 @@ export default function App() {
                     <div className="flex flex-col items-center gap-4">
                       {!is24Hour && (
                         <div className={`px-6 py-1.5 rounded-full border ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-500/5 border-blue-500/10 text-blue-600'}`}>
-                          <span className="text-sm md:text-base font-black tracking-[0.8em] uppercase ml-[0.8em]">
+                          <span className="text-sm md:text-base font-black tracking-[0.8em] uppercase">
                             {time.getHours() >= 12 ? 'PM' : 'AM'}
                           </span>
                         </div>
                       )}
-                      <p className={`text-2xl md:text-5xl font-extralight tracking-[0.8em] uppercase ml-[0.8em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                      <p className={`text-2xl md:text-5xl font-extralight tracking-[0.8em] uppercase text-center ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                         {formatDate(time)}
                       </p>
                     </div>
