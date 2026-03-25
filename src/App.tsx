@@ -499,6 +499,7 @@ export default function App() {
                 onClick={() => setActiveTab('dashboard')}
                 className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black overflow-hidden cursor-pointer"
               >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none z-10" />
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
@@ -510,42 +511,49 @@ export default function App() {
                   <Minimize2 size={32} />
                 </button>
 
-                <div className="flex flex-col items-center gap-16 md:gap-32 w-full max-w-screen-2xl px-8">
-                  <div className="flex items-center justify-center gap-4 md:gap-16 leading-none select-none" style={{ fontSize: 'clamp(5rem, 22vw, 28rem)' }}>
+                <div className="flex flex-col items-center justify-center gap-12 md:gap-24 w-full h-full px-4 md:px-12">
+                  <div className="flex items-center justify-center gap-4 md:gap-8 lg:gap-12 leading-none select-none" style={{ fontSize: 'clamp(4rem, 28vmin, 40vh)' }}>
                     <FlipUnit 
                       value={time.getHours() % (is24Hour ? 24 : 12) || (is24Hour ? 0 : 12)} 
                       showLabel={false}
                     />
-                    <div className="flex flex-col gap-4 opacity-5" style={{ fontSize: '0.4em' }}>:</div>
+                    <div className="flex flex-col items-center justify-center opacity-10 animate-pulse" style={{ fontSize: '0.3em', width: '0.5em' }}>
+                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white mb-4" />
+                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white" />
+                    </div>
                     <FlipUnit value={time.getMinutes()} showLabel={false} />
-                    <div className="flex flex-col gap-4 opacity-5 hidden xl:flex" style={{ fontSize: '0.4em' }}>:</div>
+                    <div className="hidden xl:flex flex-col items-center justify-center opacity-10 animate-pulse" style={{ fontSize: '0.3em', width: '0.5em' }}>
+                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white mb-4" />
+                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white" />
+                    </div>
                     <div className="hidden xl:block">
                       <FlipUnit value={time.getSeconds()} showLabel={false} />
                     </div>
                   </div>
                   
                   <motion.div 
-                    initial={{ opacity: 0, y: 30 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 0.8 }}
-                    className="text-center"
+                    transition={{ delay: 0.4, duration: 1 }}
+                    className="flex flex-col items-center gap-8"
                   >
-                    <div className="flex items-center justify-center gap-6 mb-8">
+                    <div className="flex flex-col items-center gap-2">
                       {!is24Hour && (
-                        <span className="text-2xl md:text-4xl font-black text-blue-500/40 tracking-widest uppercase">
-                          {time.getHours() >= 12 ? 'PM' : 'AM'}
+                        <span className="text-xl md:text-2xl font-black text-blue-500/30 tracking-[0.5em] uppercase mb-2">
+                          {time.getHours() >= 12 ? 'Post Meridiem' : 'Ante Meridiem'}
                         </span>
                       )}
-                      <p className="text-2xl md:text-5xl text-slate-800 font-medium tracking-[0.4em] uppercase">
+                      <p className="text-xl md:text-4xl text-slate-700 font-light tracking-[0.6em] uppercase">
                         {formatDate(time)}
                       </p>
                     </div>
-                    <div className="flex items-center justify-center gap-12">
-                      <div className="h-[1px] w-32 bg-white/5" />
-                      <span className="text-[14px] font-black uppercase tracking-[1em] text-blue-500/20">
-                        Focus Mode
+
+                    <div className="flex items-center gap-8 opacity-20">
+                      <div className="h-px w-12 md:w-24 bg-gradient-to-r from-transparent to-white" />
+                      <span className="text-[10px] md:text-xs font-bold uppercase tracking-[1.5em] text-white whitespace-nowrap">
+                        Focus Mode Active
                       </span>
-                      <div className="h-[1px] w-32 bg-white/5" />
+                      <div className="h-px w-12 md:w-24 bg-gradient-to-l from-transparent to-white" />
                     </div>
                   </motion.div>
                 </div>
