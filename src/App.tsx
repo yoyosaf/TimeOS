@@ -91,21 +91,25 @@ function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weathe
       animate={{ opacity: 1, scale: 1 }}
       className="glass-card p-8 rounded-[32px] flex flex-col justify-between relative overflow-hidden group"
     >
-      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
         {getWeatherIcon(current.weather_code)}
       </div>
       
-      <div>
+      <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <MapPin size={16} className="text-blue-500" />
             <span className="text-sm font-bold tracking-wider uppercase text-slate-400 truncate max-w-[150px]">{locationName}</span>
           </div>
           <button 
-            onClick={() => setIsSearching(!isSearching)}
-            className="p-2 rounded-full hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSearching(!isSearching);
+            }}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors text-slate-400 hover:text-white relative z-20"
+            aria-label="Search location"
           >
-            <Search size={16} />
+            <Search size={18} />
           </button>
         </div>
 
