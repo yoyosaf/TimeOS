@@ -137,6 +137,18 @@ body::before {
   justify-content: center;
 }
 
+.flip-card-top::after,
+.flip-card-top-flip::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+  pointer-events: none;
+}
+
 .flip-card-bottom,
 .flip-card-bottom-flip {
   background: linear-gradient(to bottom, #1a1a1a 0%, #0f0f0f 100%);

@@ -511,20 +511,27 @@ export default function App() {
                   <Minimize2 size={32} />
                 </button>
 
-                <div className="flex flex-col items-center justify-center gap-12 md:gap-24 w-full h-full px-4 md:px-12">
-                  <div className="flex items-center justify-center gap-4 md:gap-8 lg:gap-12 leading-none select-none" style={{ fontSize: 'clamp(4rem, 28vmin, 40vh)' }}>
+                <div className="relative z-20 flex flex-col items-center justify-center w-full h-full p-6 md:p-12 lg:p-24 overflow-hidden">
+                  <div 
+                    className="flex items-center justify-center gap-[0.05em] md:gap-[0.1em] leading-none select-none transition-all duration-500 ease-out" 
+                    style={{ 
+                      fontSize: 'min(18vw, 35vh)',
+                      filter: 'drop-shadow(0 20px 50px rgba(0,0,0,0.5))'
+                    }}
+                  >
                     <FlipUnit 
                       value={time.getHours() % (is24Hour ? 24 : 12) || (is24Hour ? 0 : 12)} 
                       showLabel={false}
                     />
-                    <div className="flex flex-col items-center justify-center opacity-10 animate-pulse" style={{ fontSize: '0.3em', width: '0.5em' }}>
-                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white mb-4" />
-                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white" />
+                    <div className="flex flex-col items-center justify-center opacity-20 animate-pulse mx-[0.1em]" style={{ fontSize: '0.35em' }}>
+                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white mb-[0.5em] shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
                     </div>
                     <FlipUnit value={time.getMinutes()} showLabel={false} />
-                    <div className="hidden xl:flex flex-col items-center justify-center opacity-10 animate-pulse" style={{ fontSize: '0.3em', width: '0.5em' }}>
-                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white mb-4" />
-                      <div className="w-2 h-2 md:w-4 md:h-4 rounded-full bg-white" />
+                    
+                    <div className="hidden xl:flex flex-col items-center justify-center opacity-20 animate-pulse mx-[0.1em]" style={{ fontSize: '0.35em' }}>
+                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white mb-[0.5em] shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
                     </div>
                     <div className="hidden xl:block">
                       <FlipUnit value={time.getSeconds()} showLabel={false} />
@@ -532,28 +539,33 @@ export default function App() {
                   </div>
                   
                   <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4, duration: 1 }}
-                    className="flex flex-col items-center gap-8"
+                    transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
+                    className="mt-16 md:mt-24 flex flex-col items-center gap-10"
                   >
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center gap-4">
                       {!is24Hour && (
-                        <span className="text-xl md:text-2xl font-black text-blue-500/30 tracking-[0.5em] uppercase mb-2">
-                          {time.getHours() >= 12 ? 'Post Meridiem' : 'Ante Meridiem'}
-                        </span>
+                        <div className="px-4 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                          <span className="text-xs md:text-sm font-black text-blue-400 tracking-[0.8em] uppercase ml-[0.8em]">
+                            {time.getHours() >= 12 ? 'Post Meridiem' : 'Ante Meridiem'}
+                          </span>
+                        </div>
                       )}
-                      <p className="text-xl md:text-4xl text-slate-700 font-light tracking-[0.6em] uppercase">
+                      <p className="text-2xl md:text-5xl text-slate-600 font-extralight tracking-[0.8em] uppercase ml-[0.8em]">
                         {formatDate(time)}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-8 opacity-20">
-                      <div className="h-px w-12 md:w-24 bg-gradient-to-r from-transparent to-white" />
-                      <span className="text-[10px] md:text-xs font-bold uppercase tracking-[1.5em] text-white whitespace-nowrap">
-                        Focus Mode Active
-                      </span>
-                      <div className="h-px w-12 md:w-24 bg-gradient-to-l from-transparent to-white" />
+                    <div className="flex items-center gap-12 opacity-30">
+                      <div className="h-px w-20 md:w-40 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                      <div className="flex items-center gap-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-[2em] text-white whitespace-nowrap ml-[2em]">
+                          System Active
+                        </span>
+                      </div>
+                      <div className="h-px w-20 md:w-40 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
                     </div>
                   </motion.div>
                 </div>
