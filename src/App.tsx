@@ -49,7 +49,19 @@ interface Todo {
 }
 
 // --- Components ---
-function WeatherWidget({ weather, locationName, isDarkMode }: { weather: any, locationName: string, isDarkMode: boolean }) {
+function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weather: any, locationName: string, isDarkMode: boolean, onSearch: (city: string) => void }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      onSearch(searchQuery.trim());
+      setSearchQuery('');
+      setIsSearching(false);
+    }
+  };
+
   if (!weather) {
     return (
       <div className="glass-card p-8 rounded-[32px] flex flex-col items-center justify-center text-center animate-pulse">
@@ -84,10 +96,39 @@ function WeatherWidget({ weather, locationName, isDarkMode }: { weather: any, lo
       </div>
       
       <div>
-        <div className="flex items-center gap-2 mb-6">
-          <MapPin size={16} className="text-blue-500" />
-          <span className="text-sm font-bold tracking-wider uppercase text-slate-400">{locationName}</span>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <MapPin size={16} className="text-blue-500" />
+            <span className="text-sm font-bold tracking-wider uppercase text-slate-400 truncate max-w-[150px]">{locationName}</span>
+          </div>
+          <button 
+            onClick={() => setIsSearching(!isSearching)}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+          >
+            <Search size={16} />
+          </button>
         </div>
+
+        {isSearching && (
+          <motion.form 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onSubmit={handleSearchSubmit}
+            className="mb-6 relative"
+          >
+            <input 
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search city..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              autoFocus
+            />
+            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500">
+              <ChevronRight size={18} />
+            </button>
+          </motion.form>
+        )}
         
         <div className="flex items-end gap-2 mb-8">
           <span className="text-6xl font-black tracking-tighter tabular-nums">
@@ -183,8 +224,11 @@ export default function App() {
 
   // Weather State
   const [weather, setWeather] = useState<any>(null);
-  const [location, setLocation] = useState<{lat: number, lon: number} | null>(null);
-  const [locationName, setLocationName] = useState('Detecting location...');
+  const [location, setLocation] = useState<{lat: number, lon: number} | null>(() => {
+    const saved = localStorage.getItem('weatherLocation');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [locationName, setLocationName] = useState(() => localStorage.getItem('weatherLocationName') || 'Detecting location...');
 
   // Sticky Note State
   const [stickyNote, setStickyNote] = useState(() => localStorage.getItem('stickyNote') || 'Welcome to TimeOS! Write your notes here...');
@@ -259,44 +303,66 @@ export default function App() {
   }, []);
 
   // Weather Fetching
-  useEffect(() => {
-    const fetchWeather = async (lat: number, lon: number) => {
-      try {
-        const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`
-        );
-        const data = await response.json();
-        setWeather(data);
-        
+  const fetchWeather = async (lat: number, lon: number, name?: string) => {
+    try {
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`
+      );
+      const data = await response.json();
+      setWeather(data);
+      
+      if (name) {
+        setLocationName(name);
+        localStorage.setItem('weatherLocationName', name);
+      } else {
         // Reverse geocoding (approximate)
         const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
         const geoData = await geoResponse.json();
-        setLocationName(geoData.address.city || geoData.address.town || geoData.address.village || 'Unknown Location');
-      } catch (error) {
-        console.error('Error fetching weather:', error);
+        const city = geoData.address.city || geoData.address.town || geoData.address.village || 'Unknown Location';
+        setLocationName(city);
+        localStorage.setItem('weatherLocationName', city);
       }
-    };
+      
+      const loc = { lat, lon };
+      setLocation(loc);
+      localStorage.setItem('weatherLocation', JSON.stringify(loc));
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+    }
+  };
 
-    if (navigator.geolocation) {
+  useEffect(() => {
+    if (location) {
+      fetchWeather(location.lat, location.lon, locationName);
+    } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setLocation({ lat: latitude, lon: longitude });
           fetchWeather(latitude, longitude);
         },
         () => {
           // Fallback to London if geolocation fails
-          const lat = 51.5074;
-          const lon = -0.1278;
-          setLocation({ lat, lon });
-          fetchWeather(lat, lon);
-          setLocationName('London (Default)');
+          fetchWeather(51.5074, -0.1278, 'London (Default)');
         }
       );
     }
   }, []);
 
   // --- Handlers ---
+  const handleWeatherSearch = async (city: string) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon, display_name } = data[0];
+        const shortName = display_name.split(',')[0];
+        fetchWeather(parseFloat(lat), parseFloat(lon), shortName);
+      }
+    } catch (error) {
+      console.error('Error searching location:', error);
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
@@ -597,7 +663,12 @@ export default function App() {
                   </motion.section>
 
                   {/* Weather Widget */}
-                  <WeatherWidget weather={weather} locationName={locationName} isDarkMode={isDarkMode} />
+                  <WeatherWidget 
+                    weather={weather} 
+                    locationName={locationName} 
+                    isDarkMode={isDarkMode} 
+                    onSearch={handleWeatherSearch}
+                  />
                 </div>
 
                 {/* Timezone Grid */}
