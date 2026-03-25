@@ -192,6 +192,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
   
   const [timezones, setTimezones] = useState<Timezone[]>(() => {
     const saved = localStorage.getItem('timezones');
@@ -584,7 +585,9 @@ export default function App() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search tools..." 
+                placeholder={`Search in ${activeTab}...`} 
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
               />
             </div>
@@ -647,7 +650,7 @@ export default function App() {
                     <span className="relative z-10 text-blue-500 font-black tracking-[0.5em] uppercase text-[10px] mb-6 animate-pulse">
                       {getGreeting()}
                     </span>
-                    <h1 className="relative z-10 text-8xl md:text-[10rem] font-black tracking-tighter leading-none mb-6 tabular-nums drop-shadow-2xl">
+                    <h1 className="relative z-10 text-[clamp(3rem,12vw,8rem)] font-black tracking-tighter leading-none mb-6 tabular-nums drop-shadow-2xl w-full text-center">
                       {formatTime(time).split(' ')[0]}
                     </h1>
                     <div className="relative z-10 flex items-center gap-4">
@@ -673,7 +676,7 @@ export default function App() {
 
                 {/* Timezone Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {timezones.map((tz) => (
+                  {timezones.filter(tz => tz.city.toLowerCase().includes(globalSearch.toLowerCase())).map((tz) => (
                     <div 
                       key={tz.city}
                       className={`glass-card p-6 rounded-3xl ${tz.isLocal ? 'ring-2 ring-blue-500/20' : ''}`}
@@ -715,7 +718,7 @@ export default function App() {
                     formatTimer={formatTimer}
                   />
                   <TodoWidget 
-                    todos={todos} 
+                    todos={todos.filter(t => t.text.toLowerCase().includes(globalSearch.toLowerCase()))} 
                     newTodo={newTodo} 
                     onAdd={addTodo} 
                     onToggle={toggleTodo} 
@@ -727,7 +730,7 @@ export default function App() {
                     onStickyNoteChange={setStickyNote} 
                   />
                   <ReminderWidget 
-                    reminders={reminders} 
+                    reminders={reminders.filter(r => r.text.toLowerCase().includes(globalSearch.toLowerCase()))} 
                     newReminder={newReminder} 
                     onNewReminderChange={setNewReminder} 
                     onAddReminder={(text: string) => {
@@ -851,7 +854,7 @@ export default function App() {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {timezones.map((tz) => (
+                  {timezones.filter(tz => tz.city.toLowerCase().includes(globalSearch.toLowerCase())).map((tz) => (
                     <div key={tz.city} className="glass-card p-8 rounded-3xl relative group">
                       {!tz.isLocal && (
                         <button 
