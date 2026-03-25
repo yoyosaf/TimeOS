@@ -43,8 +43,11 @@ interface Todo {
 }
 
 // --- Constants ---
-const TIMEZONES: Timezone[] = [
+const DEFAULT_TIMEZONES: Timezone[] = [
   { city: 'Local Time', zone: Intl.DateTimeFormat().resolvedOptions().timeZone, isLocal: true },
+  { city: 'London', zone: 'Europe/London' },
+  { city: 'New York', zone: 'America/New_York' },
+  { city: 'Tokyo', zone: 'Asia/Tokyo' },
 ];
 
 export default function App() {
@@ -56,6 +59,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isFullscreen, setIsFullscreen] = useState(false);
   
+  const [timezones, setTimezones] = useState<Timezone[]>(() => {
+    const saved = localStorage.getItem('timezones');
+    return saved ? JSON.parse(saved) : DEFAULT_TIMEZONES;
+  });
   // Stopwatch State
   const [stopwatchTime, setStopwatchTime] = useState(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
@@ -102,6 +109,10 @@ export default function App() {
     localStorage.setItem('reminders', JSON.stringify(reminders));
   }, [reminders]);
   
+  useEffect(() => {
+    localStorage.setItem('timezones', JSON.stringify(timezones));
+  }, [timezones]);
+
   // Clock Update
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -152,7 +163,9 @@ export default function App() {
   // --- Handlers ---
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
       setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) {
@@ -160,6 +173,26 @@ export default function App() {
         setIsFullscreen(false);
       }
     }
+  };
+
+  const addTimezone = () => {
+    const city = prompt('Enter city name (e.g., Paris):');
+    if (!city) return;
+    const zone = prompt('Enter timezone (e.g., Europe/Paris):');
+    if (!zone) return;
+    
+    try {
+      // Validate timezone
+      new Intl.DateTimeFormat('en-US', { timeZone: zone }).format(new Date());
+      setTimezones([...timezones, { city, zone }]);
+    } catch (e) {
+      alert('Invalid timezone identifier. Please use a valid IANA timezone name.');
+    }
+  };
+
+  const removeTimezone = (city: string) => {
+    if (timezones.find(tz => tz.city === city)?.isLocal) return;
+    setTimezones(timezones.filter(tz => tz.city !== city));
   };
 
   // Stopwatch Logic
@@ -412,7 +445,7 @@ export default function App() {
 
                 {/* Timezone Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {TIMEZONES.map((tz, idx) => (
+                  {timezones.map((tz) => (
                     <div 
                       key={tz.city}
                       className={`glass-card p-6 rounded-3xl ${tz.isLocal ? 'ring-2 ring-blue-500/20' : ''}`}
@@ -496,76 +529,76 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setActiveTab('dashboard')}
-                className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black overflow-hidden cursor-pointer"
+                className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-colors duration-700 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'}`}
               >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none z-10" />
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveTab('dashboard');
-                  }}
-                  className="absolute top-12 right-12 p-4 rounded-full bg-white/5 hover:bg-white/10 text-slate-600 hover:text-white transition-all z-[110]"
-                  title="Exit Focus Mode"
-                >
-                  <Minimize2 size={32} />
-                </button>
+                <div className={`absolute inset-0 pointer-events-none z-10 ${isDarkMode ? 'bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)]' : 'bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(255,255,255,0.5)_100%)]'}`} />
+                
+                <div className="absolute top-12 right-12 flex gap-4 z-[110]">
+                  <button 
+                    onClick={toggleFullscreen}
+                    className={`p-4 rounded-full transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white' : 'bg-black/5 hover:bg-black/10 text-slate-600 hover:text-black'}`}
+                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                  >
+                    {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('dashboard')}
+                    className={`p-4 rounded-full transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white' : 'bg-black/5 hover:bg-black/10 text-slate-600 hover:text-black'}`}
+                    title="Exit Focus Mode"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                </div>
 
                 <div className="relative z-20 flex flex-col items-center justify-center w-full h-full p-6 md:p-12 lg:p-24 overflow-hidden">
                   <div 
-                    className="flex items-center justify-center gap-[0.05em] md:gap-[0.1em] leading-none select-none transition-all duration-500 ease-out" 
+                    className="flex items-center justify-center gap-2 md:gap-4 leading-none select-none transition-all duration-500 ease-out font-black tracking-tighter" 
                     style={{ 
-                      fontSize: 'min(18vw, 35vh)',
-                      filter: 'drop-shadow(0 20px 50px rgba(0,0,0,0.5))'
+                      fontSize: 'min(25vw, 45vh)',
+                      fontFamily: '"Inter", sans-serif'
                     }}
                   >
-                    <FlipUnit 
-                      value={time.getHours() % (is24Hour ? 24 : 12) || (is24Hour ? 0 : 12)} 
-                      showLabel={false}
-                    />
-                    <div className="flex flex-col items-center justify-center opacity-20 animate-pulse mx-[0.1em]" style={{ fontSize: '0.35em' }}>
-                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white mb-[0.5em] shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-                    </div>
-                    <FlipUnit value={time.getMinutes()} showLabel={false} />
-                    
-                    <div className="hidden xl:flex flex-col items-center justify-center opacity-20 animate-pulse mx-[0.1em]" style={{ fontSize: '0.35em' }}>
-                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white mb-[0.5em] shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-                      <div className="w-[0.2em] h-[0.2em] rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-                    </div>
-                    <div className="hidden xl:block">
-                      <FlipUnit value={time.getSeconds()} showLabel={false} />
-                    </div>
+                    <span className="tabular-nums">
+                      {time.getHours() % (is24Hour ? 24 : 12) || (is24Hour ? 0 : 12)}
+                    </span>
+                    <span className="opacity-20 animate-pulse">:</span>
+                    <span className="tabular-nums">
+                      {time.getMinutes().toString().padStart(2, '0')}
+                    </span>
+                    <span className="hidden xl:inline opacity-20 animate-pulse">:</span>
+                    <span className="hidden xl:inline tabular-nums opacity-40" style={{ fontSize: '0.6em' }}>
+                      {time.getSeconds().toString().padStart(2, '0')}
+                    </span>
                   </div>
                   
                   <motion.div 
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
-                    className="mt-16 md:mt-24 flex flex-col items-center gap-10"
+                    className="mt-12 md:mt-20 flex flex-col items-center gap-8"
                   >
                     <div className="flex flex-col items-center gap-4">
                       {!is24Hour && (
-                        <div className="px-4 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
-                          <span className="text-xs md:text-sm font-black text-blue-400 tracking-[0.8em] uppercase ml-[0.8em]">
-                            {time.getHours() >= 12 ? 'Post Meridiem' : 'Ante Meridiem'}
+                        <div className={`px-6 py-1.5 rounded-full border ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-500/5 border-blue-500/10 text-blue-600'}`}>
+                          <span className="text-sm md:text-base font-black tracking-[0.8em] uppercase ml-[0.8em]">
+                            {time.getHours() >= 12 ? 'PM' : 'AM'}
                           </span>
                         </div>
                       )}
-                      <p className="text-2xl md:text-5xl text-slate-600 font-extralight tracking-[0.8em] uppercase ml-[0.8em]">
+                      <p className={`text-2xl md:text-5xl font-extralight tracking-[0.8em] uppercase ml-[0.8em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                         {formatDate(time)}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-12 opacity-30">
-                      <div className="h-px w-20 md:w-40 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                      <div className={`h-px w-20 md:w-40 ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/50 to-transparent' : 'bg-gradient-to-r from-transparent via-black/50 to-transparent'}`} />
                       <div className="flex items-center gap-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-[2em] text-white whitespace-nowrap ml-[2em]">
-                          System Active
+                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                        <span className={`text-[10px] md:text-xs font-bold uppercase tracking-[2em] whitespace-nowrap ml-[2em] ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                          Focus Active
                         </span>
                       </div>
-                      <div className="h-px w-20 md:w-40 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                      <div className={`h-px w-20 md:w-40 ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/50 to-transparent' : 'bg-gradient-to-r from-transparent via-black/50 to-transparent'}`} />
                     </div>
                   </motion.div>
                 </div>
@@ -582,13 +615,24 @@ export default function App() {
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-bold tracking-tight">Global Timezones</h2>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={addTimezone}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors text-white"
+                  >
                     <Plus size={18} /> Add Timezone
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {TIMEZONES.map((tz) => (
-                    <div key={tz.city} className="glass-card p-8 rounded-3xl">
+                  {timezones.map((tz) => (
+                    <div key={tz.city} className="glass-card p-8 rounded-3xl relative group">
+                      {!tz.isLocal && (
+                        <button 
+                          onClick={() => removeTimezone(tz.city)}
+                          className="absolute top-4 right-4 p-2 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                       <div className="flex justify-between items-start mb-6">
                         <div>
                           <h3 className="text-xl font-bold">{tz.city}</h3>
