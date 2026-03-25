@@ -365,225 +365,232 @@ export default function App() {
           </div>
         </header>
 
-        {/* --- Dashboard Content --- */}
+        {/* --- Dynamic Content Area --- */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8">
-          
-          {/* Hero Clock Card */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden animate-float"
-          >
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
-            <span className="text-blue-500 font-semibold tracking-widest uppercase text-xs mb-4">
-              {getGreeting()}
-            </span>
-            <h1 className="text-7xl md:text-9xl font-bold tracking-tighter clock-glow mb-4 tabular-nums">
-              {formatTime(time)}
-            </h1>
-            <p className="text-xl text-slate-400 font-medium">
-              {formatDate(time)}
-            </p>
-          </motion.section>
-
-          {/* Timezone Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {TIMEZONES.map((tz, idx) => (
+          <AnimatePresence mode="wait">
+            {activeTab === 'dashboard' && (
               <motion.div 
-                key={tz.city}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className={`glass-card p-6 rounded-3xl ${tz.isLocal ? 'ring-2 ring-blue-500/20' : ''}`}
+                key="dashboard"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <span className="text-sm font-semibold text-slate-400">{tz.city}</span>
-                  {tz.isLocal && (
-                    <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold uppercase">
-                      Local
-                    </span>
-                  )}
+                {/* Hero Clock Card */}
+                <motion.section 
+                  className="glass-card p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden animate-float"
+                >
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
+                  <span className="text-blue-500 font-semibold tracking-widest uppercase text-xs mb-4">
+                    {getGreeting()}
+                  </span>
+                  <h1 className="text-7xl md:text-9xl font-bold tracking-tighter clock-glow mb-4 tabular-nums">
+                    {formatTime(time)}
+                  </h1>
+                  <p className="text-xl text-slate-400 font-medium">
+                    {formatDate(time)}
+                  </p>
+                </motion.section>
+
+                {/* Timezone Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {TIMEZONES.map((tz, idx) => (
+                    <div 
+                      key={tz.city}
+                      className={`glass-card p-6 rounded-3xl ${tz.isLocal ? 'ring-2 ring-blue-500/20' : ''}`}
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <span className="text-sm font-semibold text-slate-400">{tz.city}</span>
+                        {tz.isLocal && (
+                          <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold uppercase">
+                            Local
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-2xl font-bold tabular-nums">
+                        {formatTime(time, tz.zone).split(' ')[0]}
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+                        {tz.zone.split('/')[1].replace('_', ' ')}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-2xl font-bold tabular-nums">
-                  {formatTime(time, tz.zone).split(' ')[0]}
-                </div>
-                <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
-                  {tz.zone.split('/')[1].replace('_', ' ')}
+
+                {/* Widgets Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <StopwatchWidget 
+                    stopwatchTime={stopwatchTime} 
+                    isStopwatchRunning={isStopwatchRunning} 
+                    onStart={startStopwatch} 
+                    onReset={resetStopwatch} 
+                    formatStopwatch={formatStopwatch}
+                  />
+                  <TimerWidget 
+                    timerSeconds={timerSeconds} 
+                    timerInput={timerInput} 
+                    isTimerRunning={isTimerRunning} 
+                    onStart={startTimer} 
+                    onReset={resetTimer} 
+                    onInputChange={setTimerInput} 
+                    formatTimer={formatTimer}
+                  />
+                  <TodoWidget 
+                    todos={todos} 
+                    newTodo={newTodo} 
+                    onAdd={addTodo} 
+                    onToggle={toggleTodo} 
+                    onDelete={deleteTodo} 
+                    onInputChange={setNewTodo}
+                  />
+                  <SystemWidget 
+                    isOnline={isOnline} 
+                    batteryLevel={batteryLevel} 
+                  />
                 </div>
               </motion.div>
-            ))}
-          </div>
+            )}
 
-          {/* Widgets Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* Stopwatch Widget */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <StopwatchIcon className="text-blue-500" size={24} />
-                <h3 className="font-bold">Stopwatch</h3>
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center py-4">
-                <div className="text-5xl font-mono tabular-nums mb-8">
-                  {formatStopwatch(stopwatchTime)}
+            {activeTab === 'clock' && (
+              <motion.div 
+                key="clock"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="h-full flex items-center justify-center"
+              >
+                <div className="glass-card p-20 rounded-[48px] text-center relative overflow-hidden w-full max-w-4xl">
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 pointer-events-none" />
+                  <span className="text-blue-500 font-semibold tracking-widest uppercase text-sm mb-6 block">
+                    Focus Mode
+                  </span>
+                  <h1 className="text-[10rem] md:text-[14rem] font-bold tracking-tighter clock-glow mb-8 tabular-nums leading-none">
+                    {formatTime(time)}
+                  </h1>
+                  <p className="text-3xl text-slate-400 font-medium">
+                    {formatDate(time)}
+                  </p>
                 </div>
-                <div className="flex gap-4">
-                  <button 
-                    onClick={startStopwatch}
-                    className={`px-8 py-3 rounded-2xl font-bold transition-all ${isStopwatchRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20'}`}
-                  >
-                    {isStopwatchRunning ? 'Stop' : 'Start'}
-                  </button>
-                  <button 
-                    onClick={resetStopwatch}
-                    className="px-8 py-3 rounded-2xl font-bold bg-white/5 hover:bg-white/10 transition-all"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            )}
 
-            {/* Timer Widget */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <TimerIcon className="text-purple-500" size={24} />
-                <h3 className="font-bold">Countdown Timer</h3>
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center py-4">
-                {isTimerRunning || timerSeconds > 0 ? (
-                  <div className="text-5xl font-mono tabular-nums mb-8">
-                    {formatTimer(timerSeconds)}
-                  </div>
-                ) : (
-                  <input 
-                    type="text" 
-                    value={timerInput}
-                    onChange={(e) => setTimerInput(e.target.value)}
-                    placeholder="MM:SS"
-                    className="text-5xl font-mono tabular-nums mb-8 bg-transparent text-center focus:outline-none border-b border-white/10 w-40"
-                  />
-                )}
-                <div className="flex gap-4">
-                  <button 
-                    onClick={startTimer}
-                    className={`px-8 py-3 rounded-2xl font-bold transition-all ${isTimerRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20'}`}
-                  >
-                    {isTimerRunning ? 'Pause' : 'Start'}
-                  </button>
-                  <button 
-                    onClick={resetTimer}
-                    className="px-8 py-3 rounded-2xl font-bold bg-white/5 hover:bg-white/10 transition-all"
-                  >
-                    Reset
+            {activeTab === 'timezones' && (
+              <motion.div 
+                key="timezones"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold tracking-tight">Global Timezones</h2>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors">
+                    <Plus size={18} /> Add Timezone
                   </button>
                 </div>
-              </div>
-            </div>
-
-            {/* Todo Widget */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col h-[400px]">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <LayoutDashboard className="text-emerald-500" size={24} />
-                  <h3 className="font-bold">Quick Tasks</h3>
-                </div>
-                <span className="text-xs text-slate-400">{todos.filter(t => !t.completed).length} remaining</span>
-              </div>
-              
-              <form onSubmit={addTodo} className="flex gap-2 mb-6">
-                <input 
-                  type="text" 
-                  value={newTodo}
-                  onChange={(e) => setNewTodo(e.target.value)}
-                  placeholder="Add a task..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                />
-                <button type="submit" className="p-2 bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors">
-                  <Plus size={20} />
-                </button>
-              </form>
-
-              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                <AnimatePresence initial={false}>
-                  {todos.map(todo => (
-                    <motion.div 
-                      key={todo.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group"
-                    >
-                      <input 
-                        type="checkbox" 
-                        checked={todo.completed}
-                        onChange={() => toggleTodo(todo.id)}
-                        className="w-4 h-4 rounded border-white/20 bg-transparent text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span className={`flex-1 text-sm ${todo.completed ? 'line-through text-slate-500' : ''}`}>
-                        {todo.text}
-                      </span>
-                      <button 
-                        onClick={() => deleteTodo(todo.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </motion.div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {TIMEZONES.map((tz) => (
+                    <div key={tz.city} className="glass-card p-8 rounded-3xl">
+                      <div className="flex justify-between items-start mb-6">
+                        <div>
+                          <h3 className="text-xl font-bold">{tz.city}</h3>
+                          <p className="text-sm text-slate-400">{tz.zone}</p>
+                        </div>
+                        {tz.isLocal && (
+                          <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold uppercase">
+                            Current Location
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-5xl font-mono font-bold tabular-nums mb-2">
+                        {formatTime(time, tz.zone).split(' ')[0]}
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: tz.zone }).format(time)}
+                      </div>
+                    </div>
                   ))}
-                </AnimatePresence>
-              </div>
-            </div>
+                </div>
+              </motion.div>
+            )}
 
-            {/* System Info Widget */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <Cpu className="text-orange-500" size={24} />
-                <h3 className="font-bold">System Status</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400">Network</span>
-                    <Wifi size={14} className={isOnline ? 'text-emerald-500' : 'text-red-500'} />
-                  </div>
-                  <span className="text-lg font-bold">{isOnline ? 'Online' : 'Offline'}</span>
-                  <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all duration-500 ${isOnline ? 'w-full bg-emerald-500' : 'w-0 bg-red-500'}`} />
-                  </div>
-                </div>
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400">Battery</span>
-                    <Battery size={14} className={batteryLevel && batteryLevel > 20 ? 'text-emerald-500' : 'text-red-500'} />
-                  </div>
-                  <span className="text-lg font-bold">{batteryLevel !== null ? `${batteryLevel}%` : 'N/A'}</span>
-                  <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 transition-all duration-500" 
-                      style={{ width: `${batteryLevel || 0}%` }} 
-                    />
-                  </div>
-                </div>
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2 col-span-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400">Performance</span>
-                    <span className="text-[10px] text-emerald-500 font-bold">OPTIMAL</span>
-                  </div>
-                  <div className="flex items-end gap-1 h-8">
-                    {[40, 70, 45, 90, 65, 80, 50, 85, 60, 75].map((h, i) => (
-                      <div 
-                        key={i} 
-                        className="flex-1 bg-blue-500/50 rounded-t-sm animate-pulse" 
-                        style={{ height: `${h}%`, animationDelay: `${i * 0.1}s` }} 
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            {activeTab === 'tools' && (
+              <motion.div 
+                key="tools"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-8"
+              >
+                <StopwatchWidget 
+                  stopwatchTime={stopwatchTime} 
+                  isStopwatchRunning={isStopwatchRunning} 
+                  onStart={startStopwatch} 
+                  onReset={resetStopwatch} 
+                  formatStopwatch={formatStopwatch}
+                />
+                <TimerWidget 
+                  timerSeconds={timerSeconds} 
+                  timerInput={timerInput} 
+                  isTimerRunning={isTimerRunning} 
+                  onStart={startTimer} 
+                  onReset={resetTimer} 
+                  onInputChange={setTimerInput} 
+                  formatTimer={formatTimer}
+                />
+              </motion.div>
+            )}
 
-          </div>
+            {activeTab === 'settings' && (
+              <motion.div 
+                key="settings"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="max-w-2xl mx-auto space-y-8"
+              >
+                <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+                <div className="glass-card rounded-3xl overflow-hidden divide-y divide-white/5">
+                  <div className="p-6 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold">Dark Mode</h4>
+                      <p className="text-sm text-slate-400">Switch between light and dark themes</p>
+                    </div>
+                    <button 
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-blue-600' : 'bg-slate-600'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isDarkMode ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
+                  <div className="p-6 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold">24-Hour Format</h4>
+                      <p className="text-sm text-slate-400">Toggle between 12h and 24h time display</p>
+                    </div>
+                    <button 
+                      onClick={() => setIs24Hour(!is24Hour)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${is24Hour ? 'bg-blue-600' : 'bg-slate-600'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${is24Hour ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
+                  <div className="p-6 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold">Sidebar Collapsed</h4>
+                      <p className="text-sm text-slate-400">Keep the sidebar small by default</p>
+                    </div>
+                    <button 
+                      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${sidebarCollapsed ? 'bg-blue-600' : 'bg-slate-600'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sidebarCollapsed ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Footer */}
           <footer className="pt-8 pb-4 text-center">
@@ -593,6 +600,186 @@ export default function App() {
           </footer>
         </div>
       </main>
+    </div>
+  );
+}
+
+// --- Widget Components ---
+
+function StopwatchWidget({ stopwatchTime, isStopwatchRunning, onStart, onReset, formatStopwatch }: any) {
+  return (
+    <div className="glass-card p-8 rounded-3xl flex flex-col">
+      <div className="flex items-center gap-3 mb-6">
+        <StopwatchIcon className="text-blue-500" size={24} />
+        <h3 className="font-bold">Stopwatch</h3>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center py-4">
+        <div className="text-5xl font-mono tabular-nums mb-8">
+          {formatStopwatch(stopwatchTime)}
+        </div>
+        <div className="flex gap-4">
+          <button 
+            onClick={onStart}
+            className={`px-8 py-3 rounded-2xl font-bold transition-all ${isStopwatchRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20'}`}
+          >
+            {isStopwatchRunning ? 'Stop' : 'Start'}
+          </button>
+          <button 
+            onClick={onReset}
+            className="px-8 py-3 rounded-2xl font-bold bg-white/5 hover:bg-white/10 transition-all"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimerWidget({ timerSeconds, timerInput, isTimerRunning, onStart, onReset, onInputChange, formatTimer }: any) {
+  return (
+    <div className="glass-card p-8 rounded-3xl flex flex-col">
+      <div className="flex items-center gap-3 mb-6">
+        <TimerIcon className="text-purple-500" size={24} />
+        <h3 className="font-bold">Countdown Timer</h3>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center py-4">
+        {isTimerRunning || timerSeconds > 0 ? (
+          <div className="text-5xl font-mono tabular-nums mb-8">
+            {formatTimer(timerSeconds)}
+          </div>
+        ) : (
+          <input 
+            type="text" 
+            value={timerInput}
+            onChange={(e) => onInputChange(e.target.value)}
+            placeholder="MM:SS"
+            className="text-5xl font-mono tabular-nums mb-8 bg-transparent text-center focus:outline-none border-b border-white/10 w-40"
+          />
+        )}
+        <div className="flex gap-4">
+          <button 
+            onClick={onStart}
+            className={`px-8 py-3 rounded-2xl font-bold transition-all ${isTimerRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20'}`}
+          >
+            {isTimerRunning ? 'Pause' : 'Start'}
+          </button>
+          <button 
+            onClick={onReset}
+            className="px-8 py-3 rounded-2xl font-bold bg-white/5 hover:bg-white/10 transition-all"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TodoWidget({ todos, newTodo, onAdd, onToggle, onDelete, onInputChange }: any) {
+  return (
+    <div className="glass-card p-8 rounded-3xl flex flex-col h-[400px]">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <LayoutDashboard className="text-emerald-500" size={24} />
+          <h3 className="font-bold">Quick Tasks</h3>
+        </div>
+        <span className="text-xs text-slate-400">{todos.filter((t: any) => !t.completed).length} remaining</span>
+      </div>
+      
+      <form onSubmit={onAdd} className="flex gap-2 mb-6">
+        <input 
+          type="text" 
+          value={newTodo}
+          onChange={(e) => onInputChange(e.target.value)}
+          placeholder="Add a task..."
+          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+        />
+        <button type="submit" className="p-2 bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors">
+          <Plus size={20} />
+        </button>
+      </form>
+
+      <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+        <AnimatePresence initial={false}>
+          {todos.map((todo: any) => (
+            <motion.div 
+              key={todo.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group"
+            >
+              <input 
+                type="checkbox" 
+                checked={todo.completed}
+                onChange={() => onToggle(todo.id)}
+                className="w-4 h-4 rounded border-white/20 bg-transparent text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className={`flex-1 text-sm ${todo.completed ? 'line-through text-slate-500' : ''}`}>
+                {todo.text}
+              </span>
+              <button 
+                onClick={() => onDelete(todo.id)}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all"
+              >
+                <Trash2 size={14} />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function SystemWidget({ isOnline, batteryLevel }: any) {
+  return (
+    <div className="glass-card p-8 rounded-3xl flex flex-col">
+      <div className="flex items-center gap-3 mb-6">
+        <Cpu className="text-orange-500" size={24} />
+        <h3 className="font-bold">System Status</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400">Network</span>
+            <Wifi size={14} className={isOnline ? 'text-emerald-500' : 'text-red-500'} />
+          </div>
+          <span className="text-lg font-bold">{isOnline ? 'Online' : 'Offline'}</span>
+          <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+            <div className={`h-full transition-all duration-500 ${isOnline ? 'w-full bg-emerald-500' : 'w-0 bg-red-500'}`} />
+          </div>
+        </div>
+        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400">Battery</span>
+            <Battery size={14} className={batteryLevel && batteryLevel > 20 ? 'text-emerald-500' : 'text-red-500'} />
+          </div>
+          <span className="text-lg font-bold">{batteryLevel !== null ? `${batteryLevel}%` : 'N/A'}</span>
+          <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-blue-500 transition-all duration-500" 
+              style={{ width: `${batteryLevel || 0}%` }} 
+            />
+          </div>
+        </div>
+        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2 col-span-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400">Performance</span>
+            <span className="text-[10px] text-emerald-500 font-bold">OPTIMAL</span>
+          </div>
+          <div className="flex items-end gap-1 h-8">
+            {[40, 70, 45, 90, 65, 80, 50, 85, 60, 75].map((h, i) => (
+              <div 
+                key={i} 
+                className="flex-1 bg-blue-500/50 rounded-t-sm animate-pulse" 
+                style={{ height: `${h}%`, animationDelay: `${i * 0.1}s` }} 
+              />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
