@@ -100,6 +100,132 @@ body::before {
   100% { transform: translateY(0px); }
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+/* Fliqlo Flip Clock Styles */
+.flip-card {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8), 0 30px 60px -30px rgba(0, 0, 0, 0.5);
+  border-radius: 0.05em;
+  @apply font-bold tabular-nums;
+  background-color: #111;
+  width: 1.3em;
+  height: 1.5em;
+  line-height: 1.5em;
+  transform-style: preserve-3d;
+}
+
+.flip-card-top,
+.flip-card-bottom,
+.flip-card-top-flip,
+.flip-card-bottom-flip {
+  height: 50%;
+  overflow: hidden;
+  text-align: center;
+  width: 100%;
+  position: relative;
+}
+
+.flip-card-top,
+.flip-card-top-flip {
+  background: linear-gradient(to bottom, #2a2a2a 0%, #151515 100%);
+  border-top-left-radius: 0.05em;
+  border-top-right-radius: 0.05em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.flip-card-bottom,
+.flip-card-bottom-flip {
+  background: linear-gradient(to bottom, #151515 0%, #0a0a0a 100%);
+  border-bottom-left-radius: 0.05em;
+  border-bottom-right-radius: 0.05em;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* Horizontal line across the middle */
+.flip-card::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #000;
+  z-index: 10;
+  transform: translateY(-50%);
+  box-shadow: 0 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+/* The magic of centering the text across the split */
+.flip-card-top::before,
+.flip-card-top-flip::before,
+.flip-card-bottom::before,
+.flip-card-bottom-flip::before {
+  content: attr(data-value);
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+.flip-card-top::before,
+.flip-card-top-flip::before {
+  bottom: -50%; /* Push text down so its middle is at the split */
+}
+
+.flip-card-bottom::before,
+.flip-card-bottom-flip::before {
+  top: -50%; /* Pull text up so its middle is at the split */
+}
+
+.flip-card-top-flip,
+.flip-card-bottom-flip {
+  position: absolute;
+  left: 0;
+  z-index: 2;
+  backface-visibility: hidden;
+}
+
+.flip-card-top-flip {
+  top: 0;
+  transform-origin: bottom;
+  animation: flip-top 0.6s ease-in forwards;
+}
+
+.flip-card-bottom-flip {
+  bottom: 0;
+  transform-origin: top;
+  transform: rotateX(90deg);
+  animation: flip-bottom 0.6s ease-out 0.3s forwards;
+}
+
+@keyframes flip-top {
+  0% { transform: rotateX(0deg); }
+  100% { transform: rotateX(-90deg); }
+}
+
+@keyframes flip-bottom {
+  0% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+.flip-unit-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  perspective: 1000px;
+}
+
+.flip-unit-label {
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 900;
 }

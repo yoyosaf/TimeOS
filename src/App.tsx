@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Logo } from './components/Logo';
 import { 
   Clock, 
   Globe, 
@@ -44,9 +45,6 @@ interface Todo {
 // --- Constants ---
 const TIMEZONES: Timezone[] = [
   { city: 'Local Time', zone: Intl.DateTimeFormat().resolvedOptions().timeZone, isLocal: true },
-  { city: 'New York', zone: 'America/New_York' },
-  { city: 'London', zone: 'Europe/London' },
-  { city: 'Dubai', zone: 'Asia/Dubai' },
 ];
 
 export default function App() {
@@ -83,7 +81,26 @@ export default function App() {
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // Sticky Note State
+  const [stickyNote, setStickyNote] = useState(() => localStorage.getItem('stickyNote') || 'Welcome to TimeOS! Write your notes here...');
+
+  // Reminder State
+  const [reminders, setReminders] = useState<Todo[]>(() => {
+    const saved = localStorage.getItem('reminders');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [newReminder, setNewReminder] = useState('');
+
   // --- Effects ---
+  
+  // Persistence
+  useEffect(() => {
+    localStorage.setItem('stickyNote', stickyNote);
+  }, [stickyNote]);
+
+  useEffect(() => {
+    localStorage.setItem('reminders', JSON.stringify(reminders));
+  }, [reminders]);
   
   // Clock Update
   useEffect(() => {
@@ -258,12 +275,12 @@ export default function App() {
       <aside 
         className={`glass-card h-full border-r transition-all duration-300 flex flex-col z-50 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}
       >
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-            T
-          </div>
+        <div className="p-6 flex flex-col items-center gap-4">
+          <Logo className="scale-75 origin-top" showText={!sidebarCollapsed} />
           {!sidebarCollapsed && (
-            <span className="text-xl font-bold tracking-tight">TimeOS</span>
+            <span className="text-sm font-medium text-slate-400 tracking-[0.2em] uppercase text-center">
+              by safikul islam
+            </span>
           )}
         </div>
 
@@ -381,6 +398,7 @@ export default function App() {
                   className="glass-card p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden animate-float"
                 >
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
+                  <Logo className="scale-110 mb-8" />
                   <span className="text-blue-500 font-semibold tracking-widest uppercase text-xs mb-4">
                     {getGreeting()}
                   </span>
@@ -418,7 +436,7 @@ export default function App() {
                 </div>
 
                 {/* Widgets Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-12">
                   <StopwatchWidget 
                     stopwatchTime={stopwatchTime} 
                     isStopwatchRunning={isStopwatchRunning} 
@@ -443,6 +461,27 @@ export default function App() {
                     onDelete={deleteTodo} 
                     onInputChange={setNewTodo}
                   />
+                  <StickyNoteWidget 
+                    stickyNote={stickyNote} 
+                    onStickyNoteChange={setStickyNote} 
+                  />
+                  <ReminderWidget 
+                    reminders={reminders} 
+                    newReminder={newReminder} 
+                    onNewReminderChange={setNewReminder} 
+                    onAddReminder={(text: string) => {
+                      if (!text.trim()) return;
+                      const reminder = { id: Date.now().toString(), text, completed: false };
+                      setReminders([...reminders, reminder]);
+                      setNewReminder('');
+                    }} 
+                    onToggleReminder={(id: string) => {
+                      setReminders(reminders.map(r => r.id === id ? { ...r, completed: !r.completed } : r));
+                    }} 
+                    onDeleteReminder={(id: string) => {
+                      setReminders(reminders.filter(r => r.id !== id));
+                    }} 
+                  />
                   <SystemWidget 
                     isOnline={isOnline} 
                     batteryLevel={batteryLevel} 
@@ -454,22 +493,61 @@ export default function App() {
             {activeTab === 'clock' && (
               <motion.div 
                 key="clock"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="h-full flex items-center justify-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setActiveTab('dashboard')}
+                className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black overflow-hidden cursor-pointer"
               >
-                <div className="glass-card p-20 rounded-[48px] text-center relative overflow-hidden w-full max-w-4xl">
-                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 pointer-events-none" />
-                  <span className="text-blue-500 font-semibold tracking-widest uppercase text-sm mb-6 block">
-                    Focus Mode
-                  </span>
-                  <h1 className="text-[10rem] md:text-[14rem] font-bold tracking-tighter clock-glow mb-8 tabular-nums leading-none">
-                    {formatTime(time)}
-                  </h1>
-                  <p className="text-3xl text-slate-400 font-medium">
-                    {formatDate(time)}
-                  </p>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab('dashboard');
+                  }}
+                  className="absolute top-12 right-12 p-4 rounded-full bg-white/5 hover:bg-white/10 text-slate-600 hover:text-white transition-all z-[110]"
+                  title="Exit Focus Mode"
+                >
+                  <Minimize2 size={32} />
+                </button>
+
+                <div className="flex flex-col items-center gap-16 md:gap-32 w-full max-w-screen-2xl px-8">
+                  <div className="flex items-center justify-center gap-4 md:gap-16 leading-none select-none" style={{ fontSize: 'clamp(5rem, 22vw, 28rem)' }}>
+                    <FlipUnit 
+                      value={time.getHours() % (is24Hour ? 24 : 12) || (is24Hour ? 0 : 12)} 
+                      showLabel={false}
+                    />
+                    <div className="flex flex-col gap-4 opacity-5" style={{ fontSize: '0.4em' }}>:</div>
+                    <FlipUnit value={time.getMinutes()} showLabel={false} />
+                    <div className="flex flex-col gap-4 opacity-5 hidden xl:flex" style={{ fontSize: '0.4em' }}>:</div>
+                    <div className="hidden xl:block">
+                      <FlipUnit value={time.getSeconds()} showLabel={false} />
+                    </div>
+                  </div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5, duration: 0.8 }}
+                    className="text-center"
+                  >
+                    <div className="flex items-center justify-center gap-6 mb-8">
+                      {!is24Hour && (
+                        <span className="text-2xl md:text-4xl font-black text-blue-500/40 tracking-widest uppercase">
+                          {time.getHours() >= 12 ? 'PM' : 'AM'}
+                        </span>
+                      )}
+                      <p className="text-2xl md:text-5xl text-slate-800 font-medium tracking-[0.4em] uppercase">
+                        {formatDate(time)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center gap-12">
+                      <div className="h-[1px] w-32 bg-white/5" />
+                      <span className="text-[14px] font-black uppercase tracking-[1em] text-blue-500/20">
+                        Focus Mode
+                      </span>
+                      <div className="h-[1px] w-32 bg-white/5" />
+                    </div>
+                  </motion.div>
                 </div>
               </motion.div>
             )}
@@ -605,6 +683,40 @@ export default function App() {
 }
 
 // --- Widget Components ---
+
+function FlipUnit({ value, label, showLabel = true }: { value: number, label?: string, showLabel?: boolean }) {
+  const [prevValue, setPrevValue] = useState(value);
+  const [isFlipping, setIsFlipping] = useState(false);
+
+  useEffect(() => {
+    if (value !== prevValue) {
+      setIsFlipping(true);
+      const timer = setTimeout(() => {
+        setPrevValue(value);
+        setIsFlipping(false);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [value, prevValue]);
+
+  const format = (v: number) => v.toString().padStart(2, '0');
+
+  return (
+    <div className="flip-unit-container" onClick={(e) => e.stopPropagation()}>
+      <div className="flip-card">
+        <div className="flip-card-top" data-value={format(value)}></div>
+        <div className="flip-card-bottom" data-value={format(prevValue)}></div>
+        {isFlipping && (
+          <>
+            <div className="flip-card-top-flip" data-value={format(prevValue)}></div>
+            <div className="flip-card-bottom-flip" data-value={format(value)}></div>
+          </>
+        )}
+      </div>
+      {showLabel && label && <span className="flip-unit-label">{label}</span>}
+    </div>
+  );
+}
 
 function StopwatchWidget({ stopwatchTime, isStopwatchRunning, onStart, onReset, formatStopwatch }: any) {
   return (
@@ -779,6 +891,93 @@ function SystemWidget({ isOnline, batteryLevel }: any) {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StickyNoteWidget({ stickyNote, onStickyNoteChange }: any) {
+  return (
+    <div className="glass-card p-8 rounded-3xl flex flex-col bg-yellow-500/5 border-yellow-500/20">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+          Sticky Note
+        </h3>
+      </div>
+      <textarea 
+        value={stickyNote}
+        onChange={(e) => onStickyNoteChange(e.target.value)}
+        className="flex-1 bg-transparent border-none resize-none focus:outline-none text-sm leading-relaxed text-slate-300 font-medium placeholder:text-slate-600 min-h-[150px]"
+        placeholder="Type your notes here..."
+      />
+    </div>
+  );
+}
+
+function ReminderWidget({ reminders, newReminder, onNewReminderChange, onAddReminder, onToggleReminder, onDeleteReminder }: any) {
+  return (
+    <div className="glass-card p-8 rounded-3xl flex flex-col bg-purple-500/5 border-purple-500/20">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-purple-500" />
+          Reminders
+        </h3>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-500 uppercase tracking-wider">
+          {reminders.filter((r: any) => !r.completed).length} Pending
+        </span>
+      </div>
+
+      <div className="flex gap-2 mb-6">
+        <input 
+          type="text" 
+          value={newReminder}
+          onChange={(e) => onNewReminderChange(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onAddReminder(newReminder)}
+          placeholder="Set a reminder..."
+          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+        />
+        <button 
+          onClick={() => onAddReminder(newReminder)}
+          className="p-2 bg-purple-600 hover:bg-purple-500 rounded-xl transition-colors text-white"
+        >
+          <Plus size={20} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar max-h-[200px]">
+        {reminders.map((reminder: any) => (
+          <div 
+            key={reminder.id}
+            className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 group hover:border-purple-500/30 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => onToggleReminder(reminder.id)}
+                className={`w-5 h-5 rounded-md border transition-all flex items-center justify-center ${
+                  reminder.completed ? 'bg-purple-600 border-purple-600' : 'border-white/20 hover:border-purple-500'
+                }`}
+              >
+                {reminder.completed && <div className="w-2 h-2 bg-white rounded-full" />}
+              </button>
+              <span className={`text-sm transition-all ${reminder.completed ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                {reminder.text}
+              </span>
+            </div>
+            <button 
+              onClick={() => onDeleteReminder(reminder.id)}
+              className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-red-500 transition-all"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+        {reminders.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-slate-600 py-8">
+            <Bell size={32} className="mb-2 opacity-20" />
+            <p className="text-xs font-medium">No reminders set</p>
+          </div>
+        )}
       </div>
     </div>
   );
