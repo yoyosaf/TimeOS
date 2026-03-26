@@ -657,11 +657,6 @@ export default function App() {
                   <X size={20} />
                 </button>
               </div>
-              {(!sidebarCollapsed || isMobile) && (
-                <span className="text-[8px] font-medium text-slate-500 tracking-[0.3em] uppercase text-center mt-1">
-                  by safikul islam
-                </span>
-              )}
             </div>
 
             <nav className="flex-1 px-3 space-y-1">
