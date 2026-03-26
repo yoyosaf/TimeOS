@@ -360,41 +360,61 @@ export default function App() {
   // --- Ambient Sound State ---
   const [ambientSound, setAmbientSound] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://www.soundjay.com/nature/rain-01.mp3' },
-    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://www.soundjay.com/nature/ocean-waves-1.mp3' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://www.soundjay.com/nature/forest-wind-1.mp3' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://www.soundjay.com/misc/sounds/coffee-shop-1.mp3' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://www.soundjay.com/nature/rain-01.mp3' },
+    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, mp3: 'https://www.soundjay.com/nature/ocean-waves-1.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://www.soundjay.com/nature/forest-wind-1.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://www.soundjay.com/misc/sounds/coffee-shop-1.mp3' },
   ];
 
-  const toggleSound = (url: string) => {
-    if (ambientSound === url) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
+  const toggleSound = async (sound: any) => {
+    if (!audioRef.current) return;
+
+    const url = sound.mp3;
+    const isPlaying = ambientSound === url;
+
+    if (isPlaying) {
+      try {
+        if (playPromiseRef.current) {
+          await playPromiseRef.current;
+        }
+      } catch (e) {}
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
       setAmbientSound(null);
     } else {
-      if (audioRef.current) {
-        try {
+      try {
+        if (ambientSound) {
+          try {
+            if (playPromiseRef.current) {
+              await playPromiseRef.current;
+            }
+          } catch (e) {}
           audioRef.current.pause();
-          audioRef.current.src = url;
-          audioRef.current.loop = true;
-          audioRef.current.load();
-          
-          const playPromise = audioRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(e => {
+        }
+
+        audioRef.current.src = url;
+        audioRef.current.loop = true;
+        audioRef.current.load();
+        
+        const playPromise = audioRef.current.play();
+        playPromiseRef.current = playPromise;
+        
+        setAmbientSound(url);
+
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            if (e.name !== 'AbortError') {
               console.error("Audio playback failed:", e);
               setAmbientSound(null);
-            });
-          }
-          setAmbientSound(url);
-        } catch (e) {
-          console.error("Audio setup failed:", e);
-          setAmbientSound(null);
+            }
+          });
         }
+      } catch (e) {
+        console.error("Audio setup failed:", e);
+        setAmbientSound(null);
       }
     }
   };
@@ -985,7 +1005,7 @@ export default function App() {
 
       {/* --- Main Content --- */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <audio ref={audioRef} crossOrigin="anonymous" preload="auto" />
+        <audio ref={audioRef} preload="auto" />
         
         {/* --- Top Navbar --- */}
         <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 bg-white/5 backdrop-blur-xl relative z-50">
@@ -1906,9 +1926,9 @@ function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSugge
               {sounds.map((sound) => (
                 <button
                   key={sound.id}
-                  onClick={() => toggleSound(sound.url)}
+                  onClick={() => toggleSound(sound)}
                   className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                    ambientSound === sound.url ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-white/5 border-white/5 hover:bg-white/10 text-slate-400'
+                    ambientSound === sound.mp3 ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-white/5 border-white/5 hover:bg-white/10 text-slate-400'
                   }`}
                 >
                   {sound.icon}
