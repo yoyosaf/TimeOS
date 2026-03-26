@@ -945,7 +945,7 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden relative">
         
         {/* --- Top Navbar --- */}
-        <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 glass-card">
+        <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 glass-card relative z-50">
           <div className="flex items-center gap-4 flex-1">
             <button 
               onClick={() => setMobileMenuOpen(true)}
@@ -1792,20 +1792,25 @@ function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSugge
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://actions.google.com/sounds/v1/water/rain_heavy_loud.ogg' },
-    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://actions.google.com/sounds/v1/water/waves_crashing_on_shore.ogg' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://actions.google.com/sounds/v1/ambient/morning_forest.ogg' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://actions.google.com/sounds/v1/ambient/coffee_shop.ogg' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_7315cc6064.mp3?filename=soft-rain-ambient-111154.mp3' },
+    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://cdn.pixabay.com/download/audio/2022/03/09/audio_8236319f39.mp3?filename=ocean-waves-112906.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://cdn.pixabay.com/download/audio/2022/02/12/audio_f5e6704987.mp3?filename=forest-wind-and-birds-6881.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://cdn.pixabay.com/download/audio/2021/11/25/audio_91b3259063.mp3?filename=coffee-shop-ambience-10659.mp3' },
   ];
 
   const toggleSound = (url: string) => {
     if (ambientSound === url) {
-      audioRef.current?.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setAmbientSound(null);
     } else {
       if (audioRef.current) {
+        audioRef.current.pause();
         audioRef.current.src = url;
         audioRef.current.loop = true;
+        audioRef.current.load();
         audioRef.current.play().catch(e => {
           console.error("Audio playback failed:", e);
           setAmbientSound(null);
