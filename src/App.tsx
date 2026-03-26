@@ -35,9 +35,45 @@ import {
   MapPin,
   Menu,
   X,
-  Navigation
+  Navigation,
+  Flame,
+  Zap,
+  BarChart3,
+  Calendar,
+  Music,
+  Coffee,
+  Brain,
+  Sparkles,
+  LogOut,
+  LogIn,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  orderBy, 
+  limit, 
+  Timestamp,
+  handleFirestoreError,
+  OperationType,
+  FirebaseUser
+} from './firebase';
+import { generateDailyPlan, getFocusSuggestion, getProductivityScore } from './services/aiService';
 
 // --- Types ---
 interface Timezone {
@@ -294,7 +330,12 @@ const DEFAULT_TIMEZONES: Timezone[] = [
 ];
 
 export default function App() {
-  // --- State ---
+  // --- Auth State ---
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // --- UI State ---
   const [time, setTime] = useState(new Date());
   const [is24Hour, setIs24Hour] = useState(() => localStorage.getItem('is24Hour') === 'true');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') !== 'light');
@@ -304,46 +345,43 @@ export default function App() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [newTodo, setNewTodo] = useState('');
+  const [newReminder, setNewReminder] = useState('');
   
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  const [timezones, setTimezones] = useState<Timezone[]>(() => {
-    const saved = localStorage.getItem('timezones');
-    return saved ? JSON.parse(saved) : DEFAULT_TIMEZONES;
-  });
-  // Stopwatch State
+  // --- Data State ---
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [reminders, setReminders] = useState<Todo[]>([]);
+  const [timezones, setTimezones] = useState<Timezone[]>(DEFAULT_TIMEZONES);
+  const [stickyNote, setStickyNote] = useState('Welcome to TimeOS! Write your notes here...');
+  const [dailyPlan, setDailyPlan] = useState<any>(null);
+  const [focusHistory, setFocusHistory] = useState<any[]>([]);
+  const [productivityStats, setProductivityStats] = useState<any>(null);
+
+  // --- Focus Mode State ---
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [focusTask, setFocusTask] = useState('');
+  const [focusTime, setFocusTime] = useState(25 * 60);
+  const [isFocusRunning, setIsFocusRunning] = useState(false);
+  const [focusType, setFocusType] = useState<'work' | 'break'>('work');
+  const [aiSuggestion, setAiSuggestion] = useState('');
+  const focusTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // --- Stopwatch State ---
   const [stopwatchTime, setStopwatchTime] = useState(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
   const stopwatchRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Timer State
+  // --- Timer State ---
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerInput, setTimerInput] = useState('05:00');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Todo State
-  const [todos, setTodos] = useState<Todo[]>(() => {
-    const saved = localStorage.getItem('todos');
-    return saved ? JSON.parse(saved) : [
-      { id: '1', text: 'Check global markets', completed: false },
-      { id: '2', text: 'Sync with London team', completed: true },
-    ];
-  });
-  const [newTodo, setNewTodo] = useState('');
-
-  // System Info State
+  // --- System Info State ---
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Weather State
+  // --- Weather State ---
   const [weather, setWeather] = useState<any>(null);
   const [location, setLocation] = useState<{lat: number, lon: number} | null>(() => {
     const saved = localStorage.getItem('weatherLocation');
@@ -351,15 +389,62 @@ export default function App() {
   });
   const [locationName, setLocationName] = useState(() => localStorage.getItem('weatherLocationName') || 'Detecting location...');
 
-  // Sticky Note State
-  const [stickyNote, setStickyNote] = useState(() => localStorage.getItem('stickyNote') || 'Welcome to TimeOS! Write your notes here...');
+  // --- Auth & Data Fetching ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setIsAuthLoading(false);
+      if (firebaseUser) {
+        // Sync User Profile
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data());
+          } else {
+            // Create initial profile
+            const initialProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              theme: isDarkMode ? 'dark' : 'light',
+              streak: 1,
+              lastActive: Timestamp.now(),
+              isPro: false,
+              role: 'user',
+              settings: {
+                pomodoroWork: 25,
+                pomodoroBreak: 5,
+                autoPause: true
+              }
+            };
+            setDoc(userDocRef, initialProfile).catch(e => handleFirestoreError(e, OperationType.CREATE, 'users'));
+          }
+        }, (e) => handleFirestoreError(e, OperationType.GET, `users/${firebaseUser.uid}`));
 
-  // Reminder State
-  const [reminders, setReminders] = useState<Todo[]>(() => {
-    const saved = localStorage.getItem('reminders');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [newReminder, setNewReminder] = useState('');
+        // Sync Tasks
+        const tasksQuery = query(collection(db, 'users', firebaseUser.uid, 'tasks'), orderBy('createdAt', 'desc'));
+        onSnapshot(tasksQuery, (snap) => {
+          setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() } as Todo)));
+        }, (e) => handleFirestoreError(e, OperationType.LIST, `users/${firebaseUser.uid}/tasks`));
+
+        // Sync Notes
+        const notesQuery = query(collection(db, 'users', firebaseUser.uid, 'notes'), orderBy('createdAt', 'desc'), limit(1));
+        onSnapshot(notesQuery, (snap) => {
+          if (!snap.empty) {
+            setStickyNote(snap.docs[0].data().content);
+          }
+        }, (e) => handleFirestoreError(e, OperationType.LIST, `users/${firebaseUser.uid}/notes`));
+
+        // Sync Focus History
+        const focusQuery = query(collection(db, 'users', firebaseUser.uid, 'focusSessions'), orderBy('timestamp', 'desc'), limit(20));
+        onSnapshot(focusQuery, (snap) => {
+          setFocusHistory(snap.docs.map(d => d.data()));
+        }, (e) => handleFirestoreError(e, OperationType.LIST, `users/${firebaseUser.uid}/focusSessions`));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- Effects ---
   
@@ -470,25 +555,9 @@ export default function App() {
   }, []);
 
   // --- Handlers ---
-  const handleWeatherSearch = async (city: string) => {
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon, display_name } = data[0];
-        const shortName = display_name.split(',')[0];
-        fetchWeather(parseFloat(lat), parseFloat(lon), shortName);
-      }
-    } catch (error) {
-      console.error('Error searching location:', error);
-    }
-  };
-
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-      });
+      document.documentElement.requestFullscreen().catch(e => console.error(e));
       setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) {
@@ -498,27 +567,6 @@ export default function App() {
     }
   };
 
-  const addTimezone = () => {
-    const city = prompt('Enter city name (e.g., Paris):');
-    if (!city) return;
-    const zone = prompt('Enter timezone (e.g., Europe/Paris):');
-    if (!zone) return;
-    
-    try {
-      // Validate timezone
-      new Intl.DateTimeFormat('en-US', { timeZone: zone }).format(new Date());
-      setTimezones([...timezones, { city, zone }]);
-    } catch (e) {
-      alert('Invalid timezone identifier. Please use a valid IANA timezone name.');
-    }
-  };
-
-  const removeTimezone = (city: string) => {
-    if (timezones.find(tz => tz.city === city)?.isLocal) return;
-    setTimezones(timezones.filter(tz => tz.city !== city));
-  };
-
-  // Stopwatch Logic
   const startStopwatch = () => {
     if (isStopwatchRunning) {
       if (stopwatchRef.current) clearInterval(stopwatchRef.current);
@@ -533,19 +581,18 @@ export default function App() {
 
   const resetStopwatch = () => {
     if (stopwatchRef.current) clearInterval(stopwatchRef.current);
-    setStopwatchTime(0);
     setIsStopwatchRunning(false);
+    setStopwatchTime(0);
   };
 
-  // Timer Logic
   const startTimer = () => {
     if (isTimerRunning) {
       if (timerRef.current) clearInterval(timerRef.current);
     } else {
-      if (timerSeconds <= 0) {
+      if (timerSeconds === 0) {
         const [m, s] = timerInput.split(':').map(Number);
         const total = (m || 0) * 60 + (s || 0);
-        if (total <= 0) return;
+        if (total === 0) return;
         setTimerSeconds(total);
       }
       timerRef.current = setInterval(() => {
@@ -564,24 +611,175 @@ export default function App() {
 
   const resetTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    setTimerSeconds(0);
     setIsTimerRunning(false);
+    setTimerSeconds(0);
+  };
+
+  const addTimezone = () => {
+    const city = prompt('Enter city name:');
+    const zone = prompt('Enter timezone (e.g., America/Los_Angeles):');
+    if (city && zone) {
+      setTimezones([...timezones, { city, zone }]);
+    }
+  };
+
+  const removeTimezone = (city: string) => {
+    setTimezones(timezones.filter(tz => tz.city !== city));
+  };
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-by-user') {
+        console.info('Login cancelled by the user.');
+        return;
+      }
+      console.error('Login error:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setUserProfile(null);
+      setTodos([]);
+      setStickyNote('Welcome to TimeOS! Write your notes here...');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const handleWeatherSearch = async (city: string) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon, display_name } = data[0];
+        const shortName = display_name.split(',')[0];
+        fetchWeather(parseFloat(lat), parseFloat(lon), shortName);
+      }
+    } catch (error) {
+      console.error('Error searching location:', error);
+    }
   };
 
   // Todo Logic
-  const addTodo = (e: React.FormEvent) => {
+  const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTodo.trim()) return;
-    setTodos([{ id: Date.now().toString(), text: newTodo, completed: false }, ...todos]);
+    if (!newTodo.trim() || !user) return;
+    const taskData = {
+      uid: user.uid,
+      title: newTodo,
+      completed: false,
+      priority: 'medium',
+      createdAt: Timestamp.now()
+    };
+    const taskRef = doc(collection(db, 'users', user.uid, 'tasks'));
+    await setDoc(taskRef, taskData).catch(e => handleFirestoreError(e, OperationType.CREATE, `users/${user.uid}/tasks`));
     setNewTodo('');
   };
 
-  const toggleTodo = (id: string) => {
-    setTodos(todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const toggleTodo = async (id: string) => {
+    if (!user) return;
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+    const taskRef = doc(db, 'users', user.uid, 'tasks', id);
+    await updateDoc(taskRef, { completed: !todo.completed }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}/tasks/${id}`));
   };
 
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter(t => t.id !== id));
+  const deleteTodo = async (id: string) => {
+    if (!user) return;
+    const taskRef = doc(db, 'users', user.uid, 'tasks', id);
+    await deleteDoc(taskRef).catch(e => handleFirestoreError(e, OperationType.DELETE, `users/${user.uid}/tasks/${id}`));
+  };
+
+  // Sticky Note Logic
+  const saveStickyNote = async (content: string) => {
+    setStickyNote(content);
+    if (!user) return;
+    const notesRef = collection(db, 'users', user.uid, 'notes');
+    const q = query(notesRef, limit(1));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await setDoc(doc(notesRef), { uid: user.uid, content, createdAt: Timestamp.now() });
+    } else {
+      await updateDoc(doc(db, 'users', user.uid, 'notes', snap.docs[0].id), { content });
+    }
+  };
+
+  // AI Daily Planner Logic
+  const handleGeneratePlan = async () => {
+    if (!user) return;
+    try {
+      const tasks = todos.filter(t => !t.completed).map(t => t.title);
+      const habits = ['Exercise', 'Reading', 'Meditation']; // Example habits
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const plan = await generateDailyPlan(tasks, habits, timezone);
+      setDailyPlan(plan);
+      
+      // Save to Firestore
+      const planRef = doc(collection(db, 'users', user.uid, 'dailyPlans'));
+      await setDoc(planRef, {
+        uid: user.uid,
+        date: new Date().toISOString().split('T')[0],
+        schedule: plan,
+        createdAt: Timestamp.now()
+      }).catch(e => handleFirestoreError(e, OperationType.CREATE, `users/${user.uid}/dailyPlans`));
+    } catch (error) {
+      console.error('Plan generation error:', error);
+    }
+  };
+
+  // Focus Mode Logic
+  const startFocusSession = () => {
+    if (isFocusRunning) {
+      if (focusTimerRef.current) clearInterval(focusTimerRef.current);
+    } else {
+      focusTimerRef.current = setInterval(() => {
+        setFocusTime(prev => {
+          if (prev <= 1) {
+            completeFocusSession();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    setIsFocusRunning(!isFocusRunning);
+  };
+
+  const completeFocusSession = async () => {
+    if (focusTimerRef.current) clearInterval(focusTimerRef.current);
+    setIsFocusRunning(false);
+    
+    if (user && focusType === 'work') {
+      const sessionData = {
+        uid: user.uid,
+        duration: 25,
+        type: 'work',
+        timestamp: Timestamp.now(),
+        productivityScore: 85 // Mock score for now
+      };
+      const sessionRef = doc(collection(db, 'users', user.uid, 'focusSessions'));
+      await setDoc(sessionRef, sessionData).catch(e => handleFirestoreError(e, OperationType.CREATE, `users/${user.uid}/focusSessions`));
+
+      // Get AI Suggestion
+      const suggestion = await getFocusSuggestion(25, focusTask);
+      setAiSuggestion(suggestion);
+    }
+
+    // Toggle type
+    setFocusType(focusType === 'work' ? 'break' : 'work');
+    setFocusTime(focusType === 'work' ? 5 * 60 : 25 * 60);
   };
 
   // --- Formatters ---
@@ -668,6 +866,27 @@ export default function App() {
                 onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
               />
               <SidebarItem 
+                icon={<Brain size={20} />} 
+                label="Focus Mode" 
+                active={activeTab === 'focus'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('focus'); setMobileMenuOpen(false); }}
+              />
+              <SidebarItem 
+                icon={<Calendar size={20} />} 
+                label="Daily Planner" 
+                active={activeTab === 'planner'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('planner'); setMobileMenuOpen(false); }}
+              />
+              <SidebarItem 
+                icon={<BarChart3 size={20} />} 
+                label="Analytics" 
+                active={activeTab === 'analytics'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }}
+              />
+              <SidebarItem 
                 icon={<Clock size={20} />} 
                 label="Clock" 
                 active={activeTab === 'clock'} 
@@ -742,6 +961,12 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {userProfile?.streak > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                <Flame size={14} className="fill-current" />
+                <span className="text-xs font-black">{userProfile.streak}</span>
+              </div>
+            )}
             <button 
               onClick={() => setIs24Hour(!is24Hour)}
               className="text-[10px] sm:text-xs font-mono px-1.5 sm:px-2 py-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
@@ -761,15 +986,41 @@ export default function App() {
               {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </button>
             <div className="w-px h-6 bg-white/10 mx-1 sm:mx-2" />
-            <div className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white">
-                <User size={14} />
+            
+            {user ? (
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex flex-col items-end hidden md:flex">
+                  <span className="text-xs font-semibold">{user.displayName}</span>
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    {userProfile?.isPro ? <Crown size={10} className="text-yellow-500" /> : null}
+                    {userProfile?.isPro ? 'Pro Plan' : 'Free Plan'}
+                  </span>
+                </div>
+                <div className="relative group">
+                  <img 
+                    src={user.photoURL || ''} 
+                    alt={user.displayName || ''} 
+                    className="w-8 h-8 rounded-full border border-white/10"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute top-full right-0 mt-2 w-48 glass-card rounded-2xl p-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all shadow-2xl z-50">
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
+                    >
+                      <LogOut size={14} /> Sign Out
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="hidden md:flex flex-col">
-                <span className="text-xs font-semibold">Alex Rivera</span>
-                <span className="text-[10px] text-slate-400">Pro Plan</span>
-              </div>
-            </div>
+            ) : (
+              <button 
+                onClick={handleLogin}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-xs font-bold hover:bg-blue-700 transition-all text-white shadow-lg shadow-blue-500/20"
+              >
+                <LogIn size={16} /> Sign In
+              </button>
+            )}
           </div>
         </header>
 
@@ -817,6 +1068,20 @@ export default function App() {
                     locationName={locationName} 
                     isDarkMode={isDarkMode} 
                     onSearch={handleWeatherSearch}
+                  />
+                </div>
+
+                {/* AI Planner Quick Access */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+                  <div className="lg:col-span-2">
+                    <DailyPlanWidget plan={dailyPlan} onGenerate={handleGeneratePlan} />
+                  </div>
+                  <FocusQuickWidget 
+                    isFocusRunning={isFocusRunning} 
+                    focusTime={focusTime} 
+                    focusType={focusType} 
+                    onStart={startFocusSession}
+                    onTabChange={() => setActiveTab('focus')}
                   />
                 </div>
 
@@ -900,6 +1165,60 @@ export default function App() {
               </motion.div>
             )}
 
+            {activeTab === 'focus' && (
+              <motion.div 
+                key="focus"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="max-w-4xl mx-auto space-y-8"
+              >
+                <FocusModeTab 
+                  focusTime={focusTime}
+                  isFocusRunning={isFocusRunning}
+                  focusType={focusType}
+                  focusTask={focusTask}
+                  aiSuggestion={aiSuggestion}
+                  onStart={startFocusSession}
+                  onTaskChange={setFocusTask}
+                  formatTimer={formatTimer}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === 'planner' && (
+              <motion.div 
+                key="planner"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="max-w-4xl mx-auto space-y-8"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold tracking-tight">AI Daily Planner</h2>
+                  <button 
+                    onClick={handleGeneratePlan}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all text-white shadow-lg shadow-blue-500/20"
+                  >
+                    <Sparkles size={18} /> Regenerate Plan
+                  </button>
+                </div>
+                <DailyPlanWidget plan={dailyPlan} onGenerate={handleGeneratePlan} fullView />
+              </motion.div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <motion.div 
+                key="analytics"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <h2 className="text-3xl font-bold tracking-tight">Personal Analytics</h2>
+                <AnalyticsDashboard focusHistory={focusHistory} stats={productivityStats} />
+              </motion.div>
+            )}
             {activeTab === 'clock' && (
               <motion.div 
                 key="clock"
@@ -1161,7 +1480,7 @@ function FlipUnit({ value, label, showLabel = true }: { value: number, label?: s
 
 function StopwatchWidget({ stopwatchTime, isStopwatchRunning, onStart, onReset, formatStopwatch }: any) {
   return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[300px]">
       <div className="flex items-center gap-3 mb-6">
         <StopwatchIcon className="text-blue-500" size={24} />
         <h3 className="font-bold">Stopwatch</h3>
@@ -1191,7 +1510,7 @@ function StopwatchWidget({ stopwatchTime, isStopwatchRunning, onStart, onReset, 
 
 function TimerWidget({ timerSeconds, timerInput, isTimerRunning, onStart, onReset, onInputChange, formatTimer }: any) {
   return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[300px]">
       <div className="flex items-center gap-3 mb-6">
         <TimerIcon className="text-purple-500" size={24} />
         <h3 className="font-bold">Countdown Timer</h3>
@@ -1288,12 +1607,12 @@ function TodoWidget({ todos, newTodo, onAdd, onToggle, onDelete, onInputChange }
 
 function SystemWidget({ isOnline, batteryLevel }: any) {
   return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[400px]">
       <div className="flex items-center gap-3 mb-6">
         <Cpu className="text-orange-500" size={24} />
         <h3 className="font-bold">System Status</h3>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
         <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Network</span>
@@ -1330,6 +1649,329 @@ function SystemWidget({ isOnline, batteryLevel }: any) {
                 style={{ height: `${h}%`, animationDelay: `${i * 0.1}s` }} 
               />
             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DailyPlanWidget({ plan, onGenerate, fullView }: { plan: any, onGenerate: () => void, fullView?: boolean }) {
+  if (!plan) {
+    return (
+      <div className={`glass-card p-8 rounded-[32px] flex flex-col items-center justify-center text-center ${fullView ? 'min-h-[500px]' : 'h-[300px]'}`}>
+        <Calendar className="text-blue-500 mb-4 opacity-20" size={48} />
+        <h3 className="text-xl font-bold mb-2">No Daily Plan Yet</h3>
+        <p className="text-sm text-slate-400 mb-6 max-w-xs">Let AI generate a personalized schedule based on your tasks and habits.</p>
+        <button 
+          onClick={onGenerate}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all text-white shadow-lg shadow-blue-500/20"
+        >
+          <Sparkles size={18} /> Plan My Day
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`glass-card p-6 sm:p-8 rounded-[32px] flex flex-col ${fullView ? 'min-h-[500px]' : 'h-[300px]'}`}>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Calendar className="text-blue-500" size={24} />
+          <h3 className="font-bold">AI Daily Schedule</h3>
+        </div>
+        {!fullView && (
+          <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Today</span>
+        )}
+      </div>
+      
+      <div className={`flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar`}>
+        {plan.map((item: any, i: number) => (
+          <div key={i} className="flex gap-4 group">
+            <div className="flex flex-col items-center">
+              <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5" />
+              {i !== plan.length - 1 && <div className="w-px flex-1 bg-white/10 my-1" />}
+            </div>
+            <div className="flex-1 pb-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-black text-slate-500 uppercase tracking-tighter">{item.time}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                  item.activity.toLowerCase().includes('work') ? 'bg-blue-500/10 text-blue-500' :
+                  item.activity.toLowerCase().includes('break') ? 'bg-emerald-500/10 text-emerald-500' :
+                  'bg-white/5 text-slate-400'
+                }`}>
+                  {item.activity.toLowerCase().includes('work') ? 'Focus' : 'Routine'}
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-slate-200">{item.activity}</h4>
+              {fullView && item.description && (
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{item.description}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FocusQuickWidget({ isFocusRunning, focusTime, focusType, onStart, onTabChange }: any) {
+  const format = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col h-[300px] relative overflow-hidden group border-none">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent opacity-50" />
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Brain className="text-purple-500" size={24} />
+            <h3 className="font-bold">Focus Session</h3>
+          </div>
+          <button onClick={onTabChange} className="text-[10px] font-bold text-purple-500 uppercase hover:underline">Open Full</button>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="text-6xl font-black tracking-tighter tabular-nums mb-4">
+            {format(focusTime)}
+          </div>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">
+            {focusType === 'work' ? 'Deep Work' : 'Rest Period'}
+          </span>
+          <button 
+            onClick={onStart}
+            className={`w-full py-3 rounded-2xl font-bold transition-all ${
+              isFocusRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20'
+            }`}
+          >
+            {isFocusRunning ? 'Pause Session' : 'Start Focus'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSuggestion, onStart, onTaskChange, formatTimer }: any) {
+  const [ambientSound, setAmbientSound] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const sounds = [
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://www.soundjay.com/nature/rain-01.mp3' },
+    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://www.soundjay.com/nature/ocean-waves-1.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://www.soundjay.com/nature/forest-wind-1.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://www.soundjay.com/misc/sounds/coffee-shop-1.mp3' },
+  ];
+
+  const toggleSound = (url: string) => {
+    if (ambientSound === url) {
+      audioRef.current?.pause();
+      setAmbientSound(null);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.loop = true;
+        audioRef.current.play();
+      }
+      setAmbientSound(url);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <audio ref={audioRef} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 glass-card p-12 rounded-[48px] flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className={`absolute inset-0 opacity-10 transition-colors duration-1000 ${focusType === 'work' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+          
+          <div className="relative z-10 w-full max-w-md">
+            <input 
+              type="text" 
+              value={focusTask}
+              onChange={(e) => onTaskChange(e.target.value)}
+              placeholder="What are you focusing on?"
+              className="w-full bg-transparent text-center text-2xl font-bold placeholder:text-slate-600 focus:outline-none mb-12"
+            />
+
+            <div className="relative mb-12">
+              <svg className="w-64 h-64 transform -rotate-90">
+                <circle
+                  cx="128"
+                  cy="128"
+                  r="120"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  className="text-white/5"
+                />
+                <motion.circle
+                  cx="128"
+                  cy="128"
+                  r="120"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={754}
+                  animate={{ strokeDashoffset: 754 - (754 * focusTime) / (focusType === 'work' ? 25 * 60 : 5 * 60) }}
+                  className={focusType === 'work' ? 'text-blue-500' : 'text-emerald-500'}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-6xl font-black tracking-tighter tabular-nums">
+                  {formatTimer(focusTime)}
+                </span>
+                <span className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] mt-2">
+                  {focusType === 'work' ? 'Focus' : 'Break'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={onStart}
+                className={`flex-1 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl ${
+                  isFocusRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 
+                  (focusType === 'work' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/20')
+                }`}
+              >
+                {isFocusRunning ? 'Pause' : 'Start Session'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="glass-card p-8 rounded-[32px]">
+            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+              <Music size={20} className="text-purple-500" />
+              Ambient Sounds
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {sounds.map((sound) => (
+                <button
+                  key={sound.id}
+                  onClick={() => toggleSound(sound.url)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
+                    ambientSound === sound.url ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-white/5 border-white/5 hover:bg-white/10 text-slate-400'
+                  }`}
+                >
+                  {sound.icon}
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{sound.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {aiSuggestion && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-8 rounded-[32px] bg-blue-500/5 border-blue-500/20"
+              >
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  <Sparkles size={20} className="text-blue-500" />
+                  AI Insight
+                </h3>
+                <p className="text-sm text-slate-300 leading-relaxed italic">
+                  "{aiSuggestion}"
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsDashboard({ focusHistory, stats }: { focusHistory: any[], stats: any }) {
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-card p-8 rounded-[32px] flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
+            <Zap size={24} />
+          </div>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Productivity Score</span>
+          <span className="text-5xl font-black tracking-tighter">85</span>
+          <span className="text-xs text-emerald-500 font-bold mt-2">+12% from last week</span>
+        </div>
+        <div className="glass-card p-8 rounded-[32px] flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 mb-4">
+            <TimerIcon size={24} />
+          </div>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Focus Time</span>
+          <span className="text-5xl font-black tracking-tighter">12.5h</span>
+          <span className="text-xs text-slate-400 font-bold mt-2">This week</span>
+        </div>
+        <div className="glass-card p-8 rounded-[32px] flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 mb-4">
+            <Flame size={24} />
+          </div>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Current Streak</span>
+          <span className="text-5xl font-black tracking-tighter">5</span>
+          <span className="text-xs text-slate-400 font-bold mt-2">Days active</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="glass-card p-8 rounded-[32px]">
+          <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+            <BarChart3 size={24} className="text-blue-500" />
+            Focus History
+          </h3>
+          <div className="space-y-4">
+            {focusHistory.length > 0 ? focusHistory.map((session, i) => (
+              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <Brain size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold">Focus Session</h4>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+                      {session.timestamp?.toDate().toLocaleDateString()} • {session.duration} mins
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-black text-emerald-500">+{session.productivityScore} pts</span>
+                </div>
+              </div>
+            )) : (
+              <div className="py-12 text-center text-slate-600">
+                <BarChart3 size={48} className="mx-auto mb-4 opacity-10" />
+                <p className="text-sm font-medium">No sessions recorded yet</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="glass-card p-8 rounded-[32px] bg-gradient-to-br from-blue-600/10 to-purple-600/10 border-none">
+          <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+            <Sparkles size={24} className="text-blue-500" />
+            AI Performance Review
+          </h3>
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10">
+              <p className="text-sm text-slate-300 leading-relaxed italic">
+                "Your focus has been exceptionally high during morning sessions. You tend to lose momentum after 3 PM. Consider scheduling your most demanding tasks before noon for maximum efficiency."
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Peak Focus</span>
+                <span className="text-lg font-bold">10:00 AM</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Avg Session</span>
+                <span className="text-lg font-bold">38 mins</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

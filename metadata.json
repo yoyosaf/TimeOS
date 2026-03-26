@@ -1,5 +1,5 @@
 {
   "name": "TimeOS",
-  "description": "A premium SaaS-style digital clock dashboard with a custom TimeOS logo, timezones, stopwatch, timer, sticky notes, and reminders.",
-  "requestFramePermissions": []
+  "description": "An all-in-one AI-powered productivity OS. Features include Smart Focus Mode (Pomodoro + AI), AI Daily Planner, Personal Analytics Dashboard, Global Clock, Weather, and integrated task management.",
+  "requestFramePermissions": ["geolocation"]
 }

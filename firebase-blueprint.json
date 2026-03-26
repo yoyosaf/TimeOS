@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user settings, preferences, and productivity stats.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "theme": { "type": "string", "enum": ["light", "dark", "neon", "minimal"] },
+        "streak": { "type": "integer", "description": "Current daily streak" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "isPro": { "type": "boolean" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "pomodoroWork": { "type": "integer" },
+            "pomodoroBreak": { "type": "integer" },
+            "autoPause": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A todo item for the user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "dueDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "title", "createdAt"]
+    },
+    "Note": {
+      "title": "Sticky Note",
+      "description": "A quick note or reminder.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "content": { "type": "string" },
+        "color": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "content", "createdAt"]
+    },
+    "FocusSession": {
+      "title": "Focus Session",
+      "description": "Records a completed Pomodoro or focus period.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "duration": { "type": "integer", "description": "Duration in minutes" },
+        "type": { "type": "string", "enum": ["work", "break"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "productivityScore": { "type": "integer" }
+      },
+      "required": ["uid", "duration", "timestamp"]
+    },
+    "DailyPlan": {
+      "title": "Daily Plan",
+      "description": "AI-generated daily schedule.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "schedule": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "time": { "type": "string" },
+              "activity": { "type": "string" },
+              "isTask": { "type": "boolean" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "date", "schedule"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profile and settings"
+    },
+    "/users/{uid}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User's todo list"
+    },
+    "/users/{uid}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "User's sticky notes"
+    },
+    "/users/{uid}/focusSessions/{sessionId}": {
+      "schema": "FocusSession",
+      "description": "User's focus history"
+    },
+    "/users/{uid}/dailyPlans/{planId}": {
+      "schema": "DailyPlan",
+      "description": "User's AI-generated schedules"
+    }
+  }
+}
