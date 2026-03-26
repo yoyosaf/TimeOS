@@ -49,12 +49,11 @@ body::before {
   backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 .glass-card:hover {
-  transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.15);
-  transition: all 0.3s ease;
 }
 
 .sidebar-item {

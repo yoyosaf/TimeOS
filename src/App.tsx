@@ -157,7 +157,7 @@ function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weathe
       className="glass-card rounded-[32px] flex flex-col relative overflow-hidden group min-h-[400px] border-none shadow-2xl"
     >
       {/* Dynamic Background based on weather */}
-      <div className={`absolute inset-0 opacity-20 transition-colors duration-1000 ${
+      <div className={`absolute inset-0 opacity-20 transition-colors duration-1000 pointer-events-none ${
         current.weather_code <= 3 ? 'bg-gradient-to-br from-yellow-500/30 to-orange-600/30' :
         current.weather_code <= 67 ? 'bg-gradient-to-br from-blue-500/30 to-indigo-600/30' :
         'bg-gradient-to-br from-slate-500/30 to-slate-800/30'
@@ -362,10 +362,10 @@ export default function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://actions.google.com/sounds/v1/water/rain_heavy_loud.ogg' },
-    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://actions.google.com/sounds/v1/water/waves_crashing_on_shore.ogg' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://actions.google.com/sounds/v1/ambient/morning_forest.ogg' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://actions.google.com/sounds/v1/ambient/coffee_shop.ogg' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://www.soundjay.com/nature/rain-01.mp3' },
+    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://www.soundjay.com/nature/ocean-waves-1.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://www.soundjay.com/nature/forest-wind-1.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://www.soundjay.com/misc/sounds/coffee-shop-1.mp3' },
   ];
 
   const toggleSound = (url: string) => {
@@ -377,16 +377,25 @@ export default function App() {
       setAmbientSound(null);
     } else {
       if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = url;
-        audioRef.current.loop = true;
-        audioRef.current.load();
-        audioRef.current.play().catch(e => {
-          console.error("Audio playback failed:", e);
+        try {
+          audioRef.current.pause();
+          audioRef.current.src = url;
+          audioRef.current.loop = true;
+          audioRef.current.load();
+          
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(e => {
+              console.error("Audio playback failed:", e);
+              setAmbientSound(null);
+            });
+          }
+          setAmbientSound(url);
+        } catch (e) {
+          console.error("Audio setup failed:", e);
           setAmbientSound(null);
-        });
+        }
       }
-      setAmbientSound(url);
     }
   };
 
@@ -976,7 +985,7 @@ export default function App() {
 
       {/* --- Main Content --- */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <audio ref={audioRef} />
+        <audio ref={audioRef} crossOrigin="anonymous" preload="auto" />
         
         {/* --- Top Navbar --- */}
         <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 bg-white/5 backdrop-blur-xl relative z-50">
@@ -1793,7 +1802,7 @@ function FocusQuickWidget({ isFocusRunning, focusTime, focusType, onStart, onTab
 
   return (
     <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col min-h-[300px] relative overflow-hidden group border-none">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent opacity-50" />
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent opacity-50 pointer-events-none" />
       <div className="relative z-10 flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -1829,7 +1838,7 @@ function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSugge
     <div className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 glass-card p-6 sm:p-12 rounded-[32px] sm:rounded-[48px] flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[500px]">
-          <div className={`absolute inset-0 opacity-10 transition-colors duration-1000 ${focusType === 'work' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+          <div className={`absolute inset-0 opacity-10 transition-colors duration-1000 pointer-events-none ${focusType === 'work' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
           
           <div className="relative z-10 w-full max-w-md">
             <input 
