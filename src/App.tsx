@@ -20,6 +20,7 @@ import {
   Minimize2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   Trash2,
   Battery,
@@ -31,7 +32,10 @@ import {
   Wind,
   Droplets,
   Thermometer,
-  MapPin
+  MapPin,
+  Menu,
+  X,
+  Navigation
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -48,10 +52,24 @@ interface Todo {
   completed: boolean;
 }
 
+const BANGLADESH_DISTRICTS = [
+  "Dhaka", "Chittagong", "Sylhet", "Khulna", "Rajshahi", "Barisal", "Rangpur", "Mymensingh",
+  "Comilla", "Narayanganj", "Gazipur", "Brahmanbaria", "Noakhali", "Feni", "Chandpur",
+  "Lakshmipur", "Cox's Bazar", "Khagrachhari", "Rangamati", "Bandarban", "Sirajganj",
+  "Pabna", "Bogra", "Joypurhat", "Naogaon", "Natore", "Chapai Nawabganj", "Kushtia",
+  "Meherpur", "Chuadanga", "Jhenaidah", "Magura", "Narail", "Jessore", "Satkhira",
+  "Bagerhat", "Barguna", "Patuekhali", "Bhola", "Jhalokati", "Pirojpur", "Tangail",
+  "Manikganj", "Munshiganj", "Faridpur", "Madaripur", "Shariatpur", "Gopalganj",
+  "Rajbari", "Netrokona", "Kishoreganj", "Sherpur", "Jamalpur", "Sunamganj",
+  "Habiganj", "Moulvibazar", "Kurigram", "Gaibandha", "Lalmonirhat", "Nilphamari",
+  "Dinajpur", "Thakurgaon", "Panchagarh"
+];
+
 // --- Components ---
 function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weather: any, locationName: string, isDarkMode: boolean, onSearch: (city: string) => void }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [showDistricts, setShowDistricts] = useState(false);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,10 +82,10 @@ function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weathe
 
   if (!weather) {
     return (
-      <div className="glass-card p-8 rounded-[32px] flex flex-col items-center justify-center text-center animate-pulse">
-        <div className="w-12 h-12 bg-slate-700/20 rounded-full mb-4" />
-        <div className="h-4 w-24 bg-slate-700/20 rounded mb-2" />
-        <div className="h-8 w-16 bg-slate-700/20 rounded" />
+      <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col items-center justify-center text-center animate-pulse min-h-[400px]">
+        <div className="w-16 h-16 bg-slate-700/20 rounded-full mb-6" />
+        <div className="h-4 w-32 bg-slate-700/20 rounded mb-3" />
+        <div className="h-10 w-24 bg-slate-700/20 rounded" />
       </div>
     );
   }
@@ -75,103 +93,190 @@ function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weathe
   const current = weather.current;
   const daily = weather.daily;
   
-  const getWeatherIcon = (code: number) => {
-    if (code <= 3) return <Sun className="text-yellow-500" size={48} />;
-    if (code <= 48) return <Cloud className="text-slate-400" size={48} />;
-    if (code <= 67) return <CloudRain className="text-blue-400" size={48} />;
-    if (code <= 77) return <CloudRain className="text-blue-200" size={48} />;
-    if (code <= 82) return <CloudRain className="text-blue-500" size={48} />;
-    if (code <= 99) return <CloudLightning className="text-purple-500" size={48} />;
-    return <Sun className="text-yellow-500" size={48} />;
+  const getWeatherIcon = (code: number, size = 48) => {
+    if (code <= 3) return <Sun className="text-yellow-500" size={size} />;
+    if (code <= 48) return <Cloud className="text-slate-400" size={size} />;
+    if (code <= 67) return <CloudRain className="text-blue-400" size={size} />;
+    if (code <= 77) return <CloudRain className="text-blue-200" size={size} />;
+    if (code <= 82) return <CloudRain className="text-blue-500" size={size} />;
+    if (code <= 99) return <CloudLightning className="text-purple-500" size={size} />;
+    return <Sun className="text-yellow-500" size={size} />;
+  };
+
+  const getWeatherDesc = (code: number) => {
+    if (code === 0) return 'Clear Sky';
+    if (code <= 3) return 'Partly Cloudy';
+    if (code <= 48) return 'Foggy';
+    if (code <= 67) return 'Rainy';
+    if (code <= 77) return 'Snowy';
+    if (code <= 82) return 'Heavy Rain';
+    if (code <= 99) return 'Thunderstorm';
+    return 'Sunny';
   };
 
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="glass-card p-8 rounded-[32px] flex flex-col justify-between relative overflow-hidden group"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-card rounded-[32px] flex flex-col relative overflow-hidden group min-h-[400px] border-none shadow-2xl"
     >
-      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
-        {getWeatherIcon(current.weather_code)}
-      </div>
-      
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <MapPin size={16} className="text-blue-500" />
-            <span className="text-sm font-bold tracking-wider uppercase text-slate-400 truncate max-w-[150px]">{locationName}</span>
-          </div>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsSearching(!isSearching);
-            }}
-            className="p-2 rounded-full hover:bg-white/10 transition-colors text-slate-400 hover:text-white relative z-20"
-            aria-label="Search location"
+      {/* Dynamic Background based on weather */}
+      <div className={`absolute inset-0 opacity-20 transition-colors duration-1000 ${
+        current.weather_code <= 3 ? 'bg-gradient-to-br from-yellow-500/30 to-orange-600/30' :
+        current.weather_code <= 67 ? 'bg-gradient-to-br from-blue-500/30 to-indigo-600/30' :
+        'bg-gradient-to-br from-slate-500/30 to-slate-800/30'
+      }`} />
+
+      {/* Header Section */}
+      <div className="relative z-10 p-6 sm:p-8 pb-0">
+        <div className="flex items-center justify-between mb-8">
+          <div 
+            className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-xl transition-all"
+            onClick={() => setShowDistricts(!showDistricts)}
           >
-            <Search size={18} />
-          </button>
-        </div>
-
-        {isSearching && (
-          <motion.form 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSearchSubmit}
-            className="mb-6 relative"
-          >
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search city..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              autoFocus
-            />
-            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500">
-              <ChevronRight size={18} />
-            </button>
-          </motion.form>
-        )}
-        
-        <div className="flex items-end gap-2 mb-8">
-          <span className="text-6xl font-black tracking-tighter tabular-nums">
-            {Math.round(current.temperature_2m)}°
-          </span>
-          <span className="text-xl text-slate-500 font-medium mb-2">Celsius</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
-            <Thermometer size={18} className="text-orange-400" />
-            <div className="flex flex-col">
-              <span className="text-[10px] text-slate-500 uppercase font-bold">Feels Like</span>
-              <span className="text-sm font-bold">{Math.round(current.apparent_temperature)}°</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <MapPin size={16} className="text-emerald-500" />
             </div>
-          </div>
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
-            <Droplets size={18} className="text-blue-400" />
             <div className="flex flex-col">
-              <span className="text-[10px] text-slate-500 uppercase font-bold">Humidity</span>
-              <span className="text-sm font-bold">{current.relative_humidity_2m}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 pt-8 border-t border-white/5">
-        <div className="flex justify-between items-center">
-          {daily.time.slice(1, 4).map((date: string, i: number) => (
-            <div key={date} className="flex flex-col items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">
-                {new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(date))}
-              </span>
-              <div className="scale-75">
-                {getWeatherIcon(daily.weather_code[i+1])}
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Location</span>
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-bold truncate max-w-[120px]">{locationName}</span>
+                <ChevronDown size={14} className={`transition-transform duration-300 ${showDistricts ? 'rotate-180' : ''}`} />
               </div>
-              <span className="text-xs font-black">
-                {Math.round(daily.temperature_2m_max[i+1])}°
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setIsSearching(!isSearching)}
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all text-slate-400 hover:text-white"
+            >
+              <Search size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Bangladesh Districts Dropdown */}
+        <AnimatePresence>
+          {showDistricts && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="absolute top-24 left-6 right-6 z-50 glass-card rounded-2xl p-4 max-h-64 overflow-y-auto shadow-2xl border-white/10"
+            >
+              <div className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-3 px-2">Bangladesh Districts</div>
+              <div className="grid grid-cols-2 gap-1">
+                {BANGLADESH_DISTRICTS.map((district) => (
+                  <button
+                    key={district}
+                    onClick={() => {
+                      onSearch(district + ", Bangladesh");
+                      setShowDistricts(false);
+                    }}
+                    className="text-left px-3 py-2 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-400 text-xs transition-all truncate"
+                  >
+                    {district}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Search Input */}
+        <AnimatePresence>
+          {isSearching && (
+            <motion.form 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              onSubmit={handleSearchSubmit}
+              className="mb-8 relative"
+            >
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search any city..."
+                className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 backdrop-blur-md"
+                autoFocus
+              />
+              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-emerald-500 rounded-xl text-white shadow-lg shadow-emerald-500/20">
+                <ChevronRight size={16} />
+              </button>
+            </motion.form>
+          )}
+        </AnimatePresence>
+
+        {/* Main Weather Display */}
+        <div className="flex flex-col items-center text-center mb-10">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 100 }}
+            className="mb-4"
+          >
+            {getWeatherIcon(current.weather_code, 80)}
+          </motion.div>
+          <div className="flex flex-col">
+            <span className="text-7xl font-black tracking-tighter tabular-nums leading-none">
+              {Math.round(current.temperature_2m)}°
+            </span>
+            <span className="text-lg font-medium text-slate-400 mt-2 uppercase tracking-[0.2em]">
+              {getWeatherDesc(current.weather_code)}
+            </span>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+            <Thermometer size={16} className="text-orange-400 mb-2" />
+            <span className="text-[9px] text-slate-500 uppercase font-black tracking-tighter">Feels</span>
+            <span className="text-sm font-bold">{Math.round(current.apparent_temperature)}°</span>
+          </div>
+          <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+            <Droplets size={16} className="text-blue-400 mb-2" />
+            <span className="text-[9px] text-slate-500 uppercase font-black tracking-tighter">Humid</span>
+            <span className="text-sm font-bold">{current.relative_humidity_2m}%</span>
+          </div>
+          <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+            <Wind size={16} className="text-emerald-400 mb-2" />
+            <span className="text-[9px] text-slate-500 uppercase font-black tracking-tighter">Wind</span>
+            <span className="text-sm font-bold">{Math.round(current.wind_speed_10m)} <span className="text-[10px]">km/h</span></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Forecast Section */}
+      <div className="mt-auto bg-black/20 backdrop-blur-md p-6 sm:p-8 border-t border-white/5">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">3-Day Forecast</span>
+          <button className="text-[10px] font-bold text-blue-500 uppercase hover:underline">Details</button>
+        </div>
+        <div className="space-y-4">
+          {daily.time.slice(1, 4).map((date: string, i: number) => (
+            <div key={date} className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400 w-12">
+                {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
               </span>
+              <div className="flex items-center gap-3 flex-1 justify-center">
+                {getWeatherIcon(daily.weather_code[i + 1], 20)}
+                <div className="h-1 w-16 bg-white/10 rounded-full overflow-hidden relative">
+                  <div 
+                    className="absolute inset-y-0 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full"
+                    style={{ 
+                      left: '20%', 
+                      right: '20%' 
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-16 justify-end">
+                <span className="text-xs font-black">{Math.round(daily.temperature_2m_max[i + 1])}°</span>
+                <span className="text-xs font-medium text-slate-500">{Math.round(daily.temperature_2m_min[i + 1])}°</span>
+              </div>
             </div>
           ))}
         </div>
@@ -197,6 +302,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const [timezones, setTimezones] = useState<Timezone[]>(() => {
     const saved = localStorage.getItem('timezones');
@@ -512,84 +628,117 @@ export default function App() {
     <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark' : ''}`}>
       
       {/* --- Sidebar --- */}
-      <aside 
-        className={`glass-card h-full border-r transition-all duration-300 flex flex-col z-50 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}
-      >
-        <div className="p-6 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2 select-none">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black italic">T</div>
-            {!sidebarCollapsed && (
-              <span className="text-xl font-black tracking-tighter italic">
-                TIME<span className="text-blue-500">OS</span>
-              </span>
-            )}
-          </div>
-          {!sidebarCollapsed && (
-            <span className="text-[8px] font-medium text-slate-500 tracking-[0.3em] uppercase text-center mt-1">
-              by safikul islam
-            </span>
-          )}
-        </div>
-
-        <nav className="flex-1 px-3 space-y-1">
-          <SidebarItem 
-            icon={<LayoutDashboard size={20} />} 
-            label="Dashboard" 
-            active={activeTab === 'dashboard'} 
-            collapsed={sidebarCollapsed}
-            onClick={() => setActiveTab('dashboard')}
-          />
-          <SidebarItem 
-            icon={<Clock size={20} />} 
-            label="Clock" 
-            active={activeTab === 'clock'} 
-            collapsed={sidebarCollapsed}
-            onClick={() => setActiveTab('clock')}
-          />
-          <SidebarItem 
-            icon={<Globe size={20} />} 
-            label="Timezones" 
-            active={activeTab === 'timezones'} 
-            collapsed={sidebarCollapsed}
-            onClick={() => setActiveTab('timezones')}
-          />
-          <SidebarItem 
-            icon={<TimerIcon size={20} />} 
-            label="Tools" 
-            active={activeTab === 'tools'} 
-            collapsed={sidebarCollapsed}
-            onClick={() => setActiveTab('tools')}
-          />
-          <SidebarItem 
-            icon={<Settings size={20} />} 
-            label="Settings" 
-            active={activeTab === 'settings'} 
-            collapsed={sidebarCollapsed}
-            onClick={() => setActiveTab('settings')}
-          />
-        </nav>
-
-        <div className="p-4 border-t border-white/5">
-          <button 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-white/5 transition-colors"
+      <AnimatePresence>
+        {(mobileMenuOpen || !isMobile) && (
+          <motion.aside 
+            initial={isMobile ? { x: -300 } : false}
+            animate={{ 
+              x: mobileMenuOpen ? 0 : (isMobile ? -300 : 0),
+              width: sidebarCollapsed && !isMobile ? 80 : 256
+            }}
+            exit={isMobile ? { x: -300 } : {}}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className={`glass-card h-full border-r flex flex-col z-50 fixed lg:relative ${sidebarCollapsed && !isMobile ? 'w-20' : 'w-64'}`}
           >
-            {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          </button>
-        </div>
-      </aside>
+            <div className="p-6 flex flex-col items-center gap-2">
+              <div className="flex items-center justify-between w-full lg:justify-center">
+                <div className="flex items-center gap-2 select-none">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black italic">T</div>
+                  {(!sidebarCollapsed || isMobile) && (
+                    <span className="text-xl font-black tracking-tighter italic">
+                      TIME<span className="text-blue-500">OS</span>
+                    </span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="lg:hidden p-2 rounded-xl hover:bg-white/5"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              {(!sidebarCollapsed || isMobile) && (
+                <span className="text-[8px] font-medium text-slate-500 tracking-[0.3em] uppercase text-center mt-1">
+                  by safikul islam
+                </span>
+              )}
+            </div>
+
+            <nav className="flex-1 px-3 space-y-1">
+              <SidebarItem 
+                icon={<LayoutDashboard size={20} />} 
+                label="Dashboard" 
+                active={activeTab === 'dashboard'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
+              />
+              <SidebarItem 
+                icon={<Clock size={20} />} 
+                label="Clock" 
+                active={activeTab === 'clock'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('clock'); setMobileMenuOpen(false); }}
+              />
+              <SidebarItem 
+                icon={<Globe size={20} />} 
+                label="Timezones" 
+                active={activeTab === 'timezones'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('timezones'); setMobileMenuOpen(false); }}
+              />
+              <SidebarItem 
+                icon={<TimerIcon size={20} />} 
+                label="Tools" 
+                active={activeTab === 'tools'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }}
+              />
+              <SidebarItem 
+                icon={<Settings size={20} />} 
+                label="Settings" 
+                active={activeTab === 'settings'} 
+                collapsed={sidebarCollapsed && !isMobile}
+                onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
+              />
+            </nav>
+
+            <div className="p-4 border-t border-white/5 hidden lg:block">
+              <button 
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-white/5 transition-colors"
+              >
+                {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+              </button>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
       {/* --- Main Content --- */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         
         {/* --- Top Navbar --- */}
-        <header className="h-16 flex items-center justify-between px-8 border-b border-white/5 glass-card">
+        <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 glass-card">
           <div className="flex items-center gap-4 flex-1">
-            <div className="relative w-64">
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-xl hover:bg-white/5"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="relative w-full max-w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
-                placeholder={`Search in ${activeTab}...`} 
+                placeholder={`Search...`} 
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
@@ -597,42 +746,40 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button 
               onClick={() => setIs24Hour(!is24Hour)}
-              className="text-xs font-mono px-2 py-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              className="text-[10px] sm:text-xs font-mono px-1.5 sm:px-2 py-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
             >
               {is24Hour ? '24H' : '12H'}
             </button>
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2 rounded-full hover:bg-white/5 transition-colors"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-white/5 transition-colors"
             >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button 
               onClick={toggleFullscreen}
-              className="p-2 rounded-full hover:bg-white/5 transition-colors"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-white/5 transition-colors hidden sm:block"
             >
-              {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </button>
-            <div className="w-px h-6 bg-white/10 mx-2" />
-            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white">
-                <User size={16} />
+            <div className="w-px h-6 bg-white/10 mx-1 sm:mx-2" />
+            <div className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white">
+                <User size={14} />
               </div>
-              {!sidebarCollapsed && (
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold">Alex Rivera</span>
-                  <span className="text-[10px] text-slate-400">Pro Plan</span>
-                </div>
-              )}
+              <div className="hidden md:flex flex-col">
+                <span className="text-xs font-semibold">Alex Rivera</span>
+                <span className="text-[10px] text-slate-400">Pro Plan</span>
+              </div>
             </div>
           </div>
         </header>
 
         {/* --- Dynamic Content Area --- */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8">
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <motion.div 
@@ -642,10 +789,10 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-8"
               >
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                   {/* Hero Clock Card */}
                   <motion.section 
-                    className="lg:col-span-2 glass-card p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden group"
+                    className="md:col-span-2 lg:col-span-2 glass-card p-6 sm:p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden group"
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10 opacity-50" />
                     <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700" />
@@ -704,7 +851,7 @@ export default function App() {
                 </div>
 
                 {/* Widgets Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 pb-12">
                   <StopwatchWidget 
                     stopwatchTime={stopwatchTime} 
                     isStopwatchRunning={isStopwatchRunning} 
@@ -1019,7 +1166,7 @@ function FlipUnit({ value, label, showLabel = true }: { value: number, label?: s
 
 function StopwatchWidget({ stopwatchTime, isStopwatchRunning, onStart, onReset, formatStopwatch }: any) {
   return (
-    <div className="glass-card p-8 rounded-3xl flex flex-col">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col">
       <div className="flex items-center gap-3 mb-6">
         <StopwatchIcon className="text-blue-500" size={24} />
         <h3 className="font-bold">Stopwatch</h3>
@@ -1049,7 +1196,7 @@ function StopwatchWidget({ stopwatchTime, isStopwatchRunning, onStart, onReset, 
 
 function TimerWidget({ timerSeconds, timerInput, isTimerRunning, onStart, onReset, onInputChange, formatTimer }: any) {
   return (
-    <div className="glass-card p-8 rounded-3xl flex flex-col">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col">
       <div className="flex items-center gap-3 mb-6">
         <TimerIcon className="text-purple-500" size={24} />
         <h3 className="font-bold">Countdown Timer</h3>
@@ -1089,7 +1236,7 @@ function TimerWidget({ timerSeconds, timerInput, isTimerRunning, onStart, onRese
 
 function TodoWidget({ todos, newTodo, onAdd, onToggle, onDelete, onInputChange }: any) {
   return (
-    <div className="glass-card p-8 rounded-3xl flex flex-col h-[400px]">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[400px]">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <LayoutDashboard className="text-emerald-500" size={24} />
@@ -1146,12 +1293,12 @@ function TodoWidget({ todos, newTodo, onAdd, onToggle, onDelete, onInputChange }
 
 function SystemWidget({ isOnline, batteryLevel }: any) {
   return (
-    <div className="glass-card p-8 rounded-3xl flex flex-col">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col">
       <div className="flex items-center gap-3 mb-6">
         <Cpu className="text-orange-500" size={24} />
         <h3 className="font-bold">System Status</h3>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Network</span>
@@ -1197,7 +1344,7 @@ function SystemWidget({ isOnline, batteryLevel }: any) {
 
 function StickyNoteWidget({ stickyNote, onStickyNoteChange }: any) {
   return (
-    <div className="glass-card p-8 rounded-3xl flex flex-col bg-yellow-500/5 border-yellow-500/20">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col bg-yellow-500/5 border-yellow-500/20">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-yellow-500" />
@@ -1216,7 +1363,7 @@ function StickyNoteWidget({ stickyNote, onStickyNoteChange }: any) {
 
 function ReminderWidget({ reminders, newReminder, onNewReminderChange, onAddReminder, onToggleReminder, onDeleteReminder }: any) {
   return (
-    <div className="glass-card p-8 rounded-3xl flex flex-col bg-purple-500/5 border-purple-500/20">
+    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col bg-purple-500/5 border-purple-500/20">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-purple-500" />
