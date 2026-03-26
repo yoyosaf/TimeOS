@@ -642,6 +642,11 @@ export default function App() {
         console.info('Login cancelled by the user.');
         return;
       }
+      if (error.code === 'auth/unauthorized-domain') {
+        console.error('Firebase Error: Unauthorized Domain. Please add the current domain to your Firebase Console (Authentication > Settings > Authorized domains).');
+        alert('Login failed: This domain is not authorized in your Firebase project. Please check the console for instructions.');
+        return;
+      }
       console.error('Login error:', error);
     }
   };
@@ -997,13 +1002,40 @@ export default function App() {
                   </span>
                 </div>
                 <div className="relative group">
-                  <img 
-                    src={user.photoURL || ''} 
-                    alt={user.displayName || ''} 
-                    className="w-8 h-8 rounded-full border border-white/10"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute top-full right-0 mt-2 w-48 glass-card rounded-2xl p-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all shadow-2xl z-50">
+                  <div className="flex items-center gap-2 cursor-pointer">
+                    <img 
+                      src={user.photoURL || ''} 
+                      alt={user.displayName || ''} 
+                      className="w-8 h-8 rounded-full border border-white/10"
+                      referrerPolicy="no-referrer"
+                    />
+                    <ChevronDown size={14} className="text-slate-500 group-hover:rotate-180 transition-transform" />
+                  </div>
+                  
+                  <div className="absolute top-full right-0 mt-2 w-56 glass-card rounded-2xl p-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all shadow-2xl z-50 border border-white/10">
+                    <div className="px-3 py-2 mb-2 border-bottom border-white/5">
+                      <p className="text-xs font-bold truncate">{user.displayName}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                    </div>
+                    
+                    {!userProfile?.isPro ? (
+                      <button 
+                        onClick={() => {
+                          if (user) {
+                            updateDoc(doc(db, 'users', user.uid), { isPro: true }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`));
+                          }
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 text-yellow-500 text-xs font-bold hover:bg-yellow-500/20 transition-all mb-1"
+                      >
+                        <Crown size={14} /> Upgrade to Pro
+                      </button>
+                    ) : (
+                      <div className="px-3 py-2 mb-1 flex items-center gap-2 text-yellow-500 bg-yellow-500/5 rounded-xl">
+                        <Crown size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Pro Member</span>
+                      </div>
+                    )}
+
                     <button 
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
@@ -1659,7 +1691,7 @@ function SystemWidget({ isOnline, batteryLevel }: any) {
 function DailyPlanWidget({ plan, onGenerate, fullView }: { plan: any, onGenerate: () => void, fullView?: boolean }) {
   if (!plan) {
     return (
-      <div className={`glass-card p-8 rounded-[32px] flex flex-col items-center justify-center text-center ${fullView ? 'min-h-[500px]' : 'h-[300px]'}`}>
+      <div className={`glass-card p-8 rounded-[32px] flex flex-col items-center justify-center text-center ${fullView ? 'min-h-[500px]' : 'min-h-[300px]'}`}>
         <Calendar className="text-blue-500 mb-4 opacity-20" size={48} />
         <h3 className="text-xl font-bold mb-2">No Daily Plan Yet</h3>
         <p className="text-sm text-slate-400 mb-6 max-w-xs">Let AI generate a personalized schedule based on your tasks and habits.</p>
@@ -1674,7 +1706,7 @@ function DailyPlanWidget({ plan, onGenerate, fullView }: { plan: any, onGenerate
   }
 
   return (
-    <div className={`glass-card p-6 sm:p-8 rounded-[32px] flex flex-col ${fullView ? 'min-h-[500px]' : 'h-[300px]'}`}>
+    <div className={`glass-card p-6 sm:p-8 rounded-[32px] flex flex-col ${fullView ? 'min-h-[500px]' : 'min-h-[300px]'}`}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Calendar className="text-blue-500" size={24} />
@@ -1723,7 +1755,7 @@ function FocusQuickWidget({ isFocusRunning, focusTime, focusType, onStart, onTab
   };
 
   return (
-    <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col h-[300px] relative overflow-hidden group border-none">
+    <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col min-h-[300px] relative overflow-hidden group border-none">
       <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent opacity-50" />
       <div className="relative z-10 flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
@@ -1735,7 +1767,7 @@ function FocusQuickWidget({ isFocusRunning, focusTime, focusType, onStart, onTab
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="text-6xl font-black tracking-tighter tabular-nums mb-4">
+          <div className="text-5xl sm:text-6xl font-black tracking-tighter tabular-nums mb-4">
             {format(focusTime)}
           </div>
           <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">
@@ -1760,10 +1792,10 @@ function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSugge
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://www.soundjay.com/nature/rain-01.mp3' },
-    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://www.soundjay.com/nature/ocean-waves-1.mp3' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://www.soundjay.com/nature/forest-wind-1.mp3' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://www.soundjay.com/misc/sounds/coffee-shop-1.mp3' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, url: 'https://actions.google.com/sounds/v1/water/rain_heavy_loud.ogg' },
+    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, url: 'https://actions.google.com/sounds/v1/water/waves_crashing_on_shore.ogg' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, url: 'https://actions.google.com/sounds/v1/ambient/morning_forest.ogg' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, url: 'https://actions.google.com/sounds/v1/ambient/coffee_shop.ogg' },
   ];
 
   const toggleSound = (url: string) => {
@@ -1774,7 +1806,10 @@ function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSugge
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.loop = true;
-        audioRef.current.play();
+        audioRef.current.play().catch(e => {
+          console.error("Audio playback failed:", e);
+          setAmbientSound(null);
+        });
       }
       setAmbientSound(url);
     }
@@ -1784,7 +1819,7 @@ function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSugge
     <div className="space-y-8">
       <audio ref={audioRef} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 glass-card p-12 rounded-[48px] flex flex-col items-center justify-center text-center relative overflow-hidden">
+        <div className="lg:col-span-2 glass-card p-6 sm:p-12 rounded-[32px] sm:rounded-[48px] flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[500px]">
           <div className={`absolute inset-0 opacity-10 transition-colors duration-1000 ${focusType === 'work' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
           
           <div className="relative z-10 w-full max-w-md">
@@ -1793,37 +1828,37 @@ function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSugge
               value={focusTask}
               onChange={(e) => onTaskChange(e.target.value)}
               placeholder="What are you focusing on?"
-              className="w-full bg-transparent text-center text-2xl font-bold placeholder:text-slate-600 focus:outline-none mb-12"
+              className="w-full bg-transparent text-center text-xl sm:text-2xl font-bold placeholder:text-slate-600 focus:outline-none mb-8 sm:mb-12"
             />
 
-            <div className="relative mb-12">
-              <svg className="w-64 h-64 transform -rotate-90">
+            <div className="relative mb-8 sm:mb-12 flex justify-center">
+              <svg className="w-48 h-48 sm:w-64 sm:h-64 transform -rotate-90">
                 <circle
-                  cx="128"
-                  cy="128"
-                  r="120"
+                  cx="50%"
+                  cy="50%"
+                  r="45%"
                   stroke="currentColor"
                   strokeWidth="8"
                   fill="transparent"
                   className="text-white/5"
                 />
                 <motion.circle
-                  cx="128"
-                  cy="128"
-                  r="120"
+                  cx="50%"
+                  cy="50%"
+                  r="45%"
                   stroke="currentColor"
                   strokeWidth="8"
                   fill="transparent"
-                  strokeDasharray={754}
-                  animate={{ strokeDashoffset: 754 - (754 * focusTime) / (focusType === 'work' ? 25 * 60 : 5 * 60) }}
+                  strokeDasharray="283%"
+                  animate={{ strokeDashoffset: `${283 - (283 * focusTime) / (focusType === 'work' ? 25 * 60 : 5 * 60)}%` }}
                   className={focusType === 'work' ? 'text-blue-500' : 'text-emerald-500'}
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-6xl font-black tracking-tighter tabular-nums">
+                <span className="text-4xl sm:text-6xl font-black tracking-tighter tabular-nums">
                   {formatTimer(focusTime)}
                 </span>
-                <span className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] mt-2">
+                <span className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-[0.4em] mt-2">
                   {focusType === 'work' ? 'Focus' : 'Break'}
                 </span>
               </div>
