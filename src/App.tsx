@@ -136,10 +136,10 @@ export default function App() {
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2438/2438-preview.mp3' },
-    { id: 'fireplace', name: 'Fireplace', icon: <Flame size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2439/2439-preview.mp3' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2428/2428-preview.mp3' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2444/2444-preview.mp3' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3527873c1.mp3' },
+    { id: 'fireplace', name: 'Fireplace', icon: <Flame size={18} />, mp3: 'https://cdn.pixabay.com/audio/2021/09/06/audio_448283669d.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://cdn.pixabay.com/audio/2022/03/15/audio_732296169d.mp3' },
   ];
 
   useEffect(() => {
