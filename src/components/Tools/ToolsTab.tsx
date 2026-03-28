@@ -11,7 +11,7 @@ const ToolsTab: React.FC = () => {
       className="w-full h-full min-h-[700px] glass-card rounded-[32px] overflow-hidden"
     >
       <iframe 
-        src="https://timeos.netlify.app/Tools" 
+        src="https://timeos.netlify.app/tools" 
         className="w-full h-full border-none"
         title="TimeOS Tools"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

@@ -23,30 +23,22 @@ import {
   ChevronDown,
   Plus,
   Trash2,
-  Battery,
-  Wifi,
-  Cpu,
-  Cloud,
-  CloudRain,
-  CloudLightning,
-  Wind,
-  Droplets,
-  Thermometer,
-  MapPin,
   Menu,
   X,
-  Navigation,
   Flame,
   Zap,
   BarChart3,
   Calendar,
   Music,
-  Coffee,
   Brain,
   Sparkles,
   LogOut,
   LogIn,
-  Crown
+  Crown,
+  CloudRain,
+  Droplets,
+  Wind,
+  Coffee
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -74,7 +66,15 @@ import {
   FirebaseUser
 } from './firebase';
 import { generateDailyPlan, getFocusSuggestion, getProductivityScore } from './services/aiService';
+import DashboardTab from './components/Dashboard/DashboardTab';
+import FocusTab from './components/Focus/FocusTab';
+import PlannerTab from './components/Planner/PlannerTab';
+import AnalyticsTab from './components/Analytics/AnalyticsTab';
+import ClockTab from './components/Clock/ClockTab';
+import TimezonesTab from './components/Timezones/TimezonesTab';
 import ToolsTab from './components/Tools/ToolsTab';
+import SettingsTab from './components/Settings/SettingsTab';
+import SidebarItem from './components/Sidebar/SidebarItem';
 
 // --- Types ---
 interface Timezone {
@@ -89,238 +89,8 @@ interface Todo {
   completed: boolean;
 }
 
-const BANGLADESH_DISTRICTS = [
-  "Dhaka", "Chittagong", "Sylhet", "Khulna", "Rajshahi", "Barisal", "Rangpur", "Mymensingh",
-  "Comilla", "Narayanganj", "Gazipur", "Brahmanbaria", "Noakhali", "Feni", "Chandpur",
-  "Lakshmipur", "Cox's Bazar", "Khagrachhari", "Rangamati", "Bandarban", "Sirajganj",
-  "Pabna", "Bogra", "Joypurhat", "Naogaon", "Natore", "Chapai Nawabganj", "Kushtia",
-  "Meherpur", "Chuadanga", "Jhenaidah", "Magura", "Narail", "Jessore", "Satkhira",
-  "Bagerhat", "Barguna", "Patuekhali", "Bhola", "Jhalokati", "Pirojpur", "Tangail",
-  "Manikganj", "Munshiganj", "Faridpur", "Madaripur", "Shariatpur", "Gopalganj",
-  "Rajbari", "Netrokona", "Kishoreganj", "Sherpur", "Jamalpur", "Sunamganj",
-  "Habiganj", "Moulvibazar", "Kurigram", "Gaibandha", "Lalmonirhat", "Nilphamari",
-  "Dinajpur", "Thakurgaon", "Panchagarh"
-];
-
 // --- Components ---
-function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weather: any, locationName: string, isDarkMode: boolean, onSearch: (city: string) => void }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [showDistricts, setShowDistricts] = useState(false);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      onSearch(searchQuery.trim());
-      setSearchQuery('');
-      setIsSearching(false);
-    }
-  };
-
-  if (!weather) {
-    return (
-      <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col items-center justify-center text-center animate-pulse min-h-[400px]">
-        <div className="w-16 h-16 bg-slate-700/20 rounded-full mb-6" />
-        <div className="h-4 w-32 bg-slate-700/20 rounded mb-3" />
-        <div className="h-10 w-24 bg-slate-700/20 rounded" />
-      </div>
-    );
-  }
-
-  const current = weather.current;
-  const daily = weather.daily;
-  
-  const getWeatherIcon = (code: number, size = 48) => {
-    if (code <= 3) return <Sun className="text-yellow-500" size={size} />;
-    if (code <= 48) return <Cloud className="text-slate-400" size={size} />;
-    if (code <= 67) return <CloudRain className="text-blue-400" size={size} />;
-    if (code <= 77) return <CloudRain className="text-blue-200" size={size} />;
-    if (code <= 82) return <CloudRain className="text-blue-500" size={size} />;
-    if (code <= 99) return <CloudLightning className="text-purple-500" size={size} />;
-    return <Sun className="text-yellow-500" size={size} />;
-  };
-
-  const getWeatherDesc = (code: number) => {
-    if (code === 0) return 'Clear Sky';
-    if (code <= 3) return 'Partly Cloudy';
-    if (code <= 48) return 'Foggy';
-    if (code <= 67) return 'Rainy';
-    if (code <= 77) return 'Snowy';
-    if (code <= 82) return 'Heavy Rain';
-    if (code <= 99) return 'Thunderstorm';
-    return 'Sunny';
-  };
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-card rounded-[32px] flex flex-col relative overflow-hidden group min-h-[400px] border-none shadow-2xl"
-    >
-      {/* Dynamic Background based on weather */}
-      <div className={`absolute inset-0 opacity-20 transition-colors duration-1000 pointer-events-none ${
-        current.weather_code <= 3 ? 'bg-gradient-to-br from-yellow-500/30 to-orange-600/30' :
-        current.weather_code <= 67 ? 'bg-gradient-to-br from-blue-500/30 to-indigo-600/30' :
-        'bg-gradient-to-br from-slate-500/30 to-slate-800/30'
-      }`} />
-
-      {/* Header Section */}
-      <div className="relative z-10 p-6 sm:p-8 pb-0">
-        <div className="flex items-center justify-between mb-8">
-          <div 
-            className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-xl transition-all"
-            onClick={() => setShowDistricts(!showDistricts)}
-          >
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-              <MapPin size={16} className="text-emerald-500" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Location</span>
-              <div className="flex items-center gap-1">
-                <span className="text-sm font-bold truncate max-w-[120px]">{locationName}</span>
-                <ChevronDown size={14} className={`transition-transform duration-300 ${showDistricts ? 'rotate-180' : ''}`} />
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setIsSearching(!isSearching)}
-              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all text-slate-400 hover:text-white"
-            >
-              <Search size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Bangladesh Districts Dropdown */}
-        <AnimatePresence>
-          {showDistricts && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="absolute top-24 left-6 right-6 z-50 glass-card rounded-2xl p-4 max-h-64 overflow-y-auto shadow-2xl border-white/10"
-            >
-              <div className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-3 px-2">Bangladesh Districts</div>
-              <div className="grid grid-cols-2 gap-1">
-                {BANGLADESH_DISTRICTS.map((district) => (
-                  <button
-                    key={district}
-                    onClick={() => {
-                      onSearch(district + ", Bangladesh");
-                      setShowDistricts(false);
-                    }}
-                    className="text-left px-3 py-2 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-400 text-xs transition-all truncate"
-                  >
-                    {district}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Search Input */}
-        <AnimatePresence>
-          {isSearching && (
-            <motion.form 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              onSubmit={handleSearchSubmit}
-              className="mb-8 relative"
-            >
-              <input 
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search any city..."
-                className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 backdrop-blur-md"
-                autoFocus
-              />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-emerald-500 rounded-xl text-white shadow-lg shadow-emerald-500/20">
-                <ChevronRight size={16} />
-              </button>
-            </motion.form>
-          )}
-        </AnimatePresence>
-
-        {/* Main Weather Display */}
-        <div className="flex flex-col items-center text-center mb-10">
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 100 }}
-            className="mb-4"
-          >
-            {getWeatherIcon(current.weather_code, 80)}
-          </motion.div>
-          <div className="flex flex-col">
-            <span className="text-7xl font-black tracking-tighter tabular-nums leading-none">
-              {Math.round(current.temperature_2m)}°
-            </span>
-            <span className="text-lg font-medium text-slate-400 mt-2 uppercase tracking-[0.2em]">
-              {getWeatherDesc(current.weather_code)}
-            </span>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
-          <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-            <Thermometer size={16} className="text-orange-400 mb-2" />
-            <span className="text-[9px] text-slate-500 uppercase font-black tracking-tighter">Feels</span>
-            <span className="text-sm font-bold">{Math.round(current.apparent_temperature)}°</span>
-          </div>
-          <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-            <Droplets size={16} className="text-blue-400 mb-2" />
-            <span className="text-[9px] text-slate-500 uppercase font-black tracking-tighter">Humid</span>
-            <span className="text-sm font-bold">{current.relative_humidity_2m}%</span>
-          </div>
-          <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-            <Wind size={16} className="text-emerald-400 mb-2" />
-            <span className="text-[9px] text-slate-500 uppercase font-black tracking-tighter">Wind</span>
-            <span className="text-sm font-bold">{Math.round(current.wind_speed_10m)} <span className="text-[10px]">km/h</span></span>
-          </div>
-        </div>
-      </div>
-
-      {/* Forecast Section */}
-      <div className="mt-auto bg-black/20 backdrop-blur-md p-6 sm:p-8 border-t border-white/5">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">3-Day Forecast</span>
-          <button className="text-[10px] font-bold text-blue-500 uppercase hover:underline">Details</button>
-        </div>
-        <div className="space-y-4">
-          {daily.time.slice(1, 4).map((date: string, i: number) => (
-            <div key={date} className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 w-12">
-                {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
-              </span>
-              <div className="flex items-center gap-3 flex-1 justify-center">
-                {getWeatherIcon(daily.weather_code[i + 1], 20)}
-                <div className="h-1 w-16 bg-white/10 rounded-full overflow-hidden relative">
-                  <div 
-                    className="absolute inset-y-0 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full"
-                    style={{ 
-                      left: '20%', 
-                      right: '20%' 
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2 w-16 justify-end">
-                <span className="text-xs font-black">{Math.round(daily.temperature_2m_max[i + 1])}°</span>
-                <span className="text-xs font-medium text-slate-500">{Math.round(daily.temperature_2m_min[i + 1])}°</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
 // --- Constants ---
 const DEFAULT_TIMEZONES: Timezone[] = [
@@ -441,19 +211,40 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    const path = window.location.pathname;
-    if (path === '/Tools' || path === '/tools') {
+    const path = window.location.pathname.substring(1); // Remove leading slash
+    const tabMap: { [key: string]: string } = {
+      'Dashboard': 'dashboard',
+      'Focus': 'focus',
+      'Planner': 'planner',
+      'Analytics': 'analytics',
+      'Clock': 'clock',
+      'Timezones': 'timezones',
+      'Tools': 'tools',
+      'Settings': 'settings'
+    };
+    
+    if (tabMap[path]) {
+      setActiveTab(tabMap[path]);
+    } else if (path.toLowerCase() === 'tools') {
       setActiveTab('tools');
     }
   }, []);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    if (tab === 'tools') {
-      window.history.pushState({}, '', '/Tools');
-    } else {
-      window.history.pushState({}, '', '/');
-    }
+    const urlMap: { [key: string]: string } = {
+      'dashboard': 'Dashboard',
+      'focus': 'Focus',
+      'planner': 'Planner',
+      'analytics': 'Analytics',
+      'clock': 'Clock',
+      'timezones': 'Timezones',
+      'tools': 'Tools',
+      'settings': 'Settings'
+    };
+    
+    const path = urlMap[tab] || '';
+    window.history.pushState({}, '', `/${path}`);
     setMobileMenuOpen(false);
   };
 
@@ -951,14 +742,14 @@ export default function App() {
               />
               <SidebarItem 
                 icon={<Brain size={20} />} 
-                label="Focus Mode" 
+                label="Focus" 
                 active={activeTab === 'focus'} 
                 collapsed={sidebarCollapsed && !isMobile}
                 onClick={() => handleTabChange('focus')}
               />
               <SidebarItem 
                 icon={<Calendar size={20} />} 
-                label="Daily Planner" 
+                label="Planner" 
                 active={activeTab === 'planner'} 
                 collapsed={sidebarCollapsed && !isMobile}
                 onClick={() => handleTabChange('planner')}
@@ -1158,331 +949,105 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8">
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
-              <motion.div 
-                key="dashboard"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                  {/* Hero Clock Card */}
-                  <motion.section 
-                    className="md:col-span-2 lg:col-span-2 glass-card p-6 sm:p-12 rounded-[32px] flex flex-col items-center justify-center text-center relative overflow-hidden group"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10 opacity-50" />
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700" />
-                    <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all duration-700" />
-                    
-                    <span className="relative z-10 text-blue-500 font-black tracking-[0.5em] uppercase text-[10px] mb-6 animate-pulse">
-                      {getGreeting()}
-                    </span>
-                    <h1 className="relative z-10 text-[clamp(3rem,12vw,8rem)] font-black tracking-tighter leading-none mb-6 tabular-nums drop-shadow-2xl w-full text-center">
-                      {formatTime(time).split(' ')[0]}
-                    </h1>
-                    <div className="relative z-10 flex items-center gap-4">
-                      <p className="text-xl text-slate-400 font-light tracking-[0.3em] uppercase">
-                        {formatDate(time)}
-                      </p>
-                      {!is24Hour && (
-                        <span className="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-500 text-xs font-black uppercase tracking-widest">
-                          {time.getHours() >= 12 ? 'PM' : 'AM'}
-                        </span>
-                      )}
-                    </div>
-                  </motion.section>
-
-                  {/* Weather Widget */}
-                  <WeatherWidget 
-                    weather={weather} 
-                    locationName={locationName} 
-                    isDarkMode={isDarkMode} 
-                    onSearch={handleWeatherSearch}
-                  />
-                </div>
-
-                {/* AI Planner Quick Access */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-                  <div className="lg:col-span-2">
-                    <DailyPlanWidget plan={dailyPlan} onGenerate={handleGeneratePlan} />
-                  </div>
-                  <FocusQuickWidget 
-                    isFocusRunning={isFocusRunning} 
-                    focusTime={focusTime} 
-                    focusType={focusType} 
-                    onStart={startFocusSession}
-                    onTabChange={() => setActiveTab('focus')}
-                  />
-                </div>
-
-                {/* Timezone Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {timezones.filter(tz => tz.city.toLowerCase().includes(globalSearch.toLowerCase())).map((tz) => (
-                    <div 
-                      key={tz.city}
-                      className={`glass-card p-6 rounded-3xl ${tz.isLocal ? 'ring-2 ring-blue-500/20' : ''}`}
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="text-sm font-semibold text-slate-400">{tz.city}</span>
-                        {tz.isLocal && (
-                          <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold uppercase">
-                            Local
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-2xl font-bold tabular-nums">
-                        {formatTime(time, tz.zone).split(' ')[0]}
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
-                        {tz.zone.split('/')[1].replace('_', ' ')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Widgets Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 pb-12">
-                  <StopwatchWidget 
-                    stopwatchTime={stopwatchTime} 
-                    isStopwatchRunning={isStopwatchRunning} 
-                    onStart={startStopwatch} 
-                    onReset={resetStopwatch} 
-                    formatStopwatch={formatStopwatch}
-                  />
-                  <TimerWidget 
-                    timerSeconds={timerSeconds} 
-                    timerInput={timerInput} 
-                    isTimerRunning={isTimerRunning} 
-                    onStart={startTimer} 
-                    onReset={resetTimer} 
-                    onInputChange={setTimerInput} 
-                    formatTimer={formatTimer}
-                  />
-                  <TodoWidget 
-                    todos={todos.filter(t => t.text.toLowerCase().includes(globalSearch.toLowerCase()))} 
-                    newTodo={newTodo} 
-                    onAdd={addTodo} 
-                    onToggle={toggleTodo} 
-                    onDelete={deleteTodo} 
-                    onInputChange={setNewTodo}
-                  />
-                  <StickyNoteWidget 
-                    stickyNote={stickyNote} 
-                    onStickyNoteChange={setStickyNote} 
-                  />
-                  <ReminderWidget 
-                    reminders={reminders.filter(r => r.text.toLowerCase().includes(globalSearch.toLowerCase()))} 
-                    newReminder={newReminder} 
-                    onNewReminderChange={setNewReminder} 
-                    onAddReminder={(text: string) => {
-                      if (!text.trim()) return;
-                      const reminder = { id: Date.now().toString(), text, completed: false };
-                      setReminders([...reminders, reminder]);
-                      setNewReminder('');
-                    }} 
-                    onToggleReminder={(id: string) => {
-                      setReminders(reminders.map(r => r.id === id ? { ...r, completed: !r.completed } : r));
-                    }} 
-                    onDeleteReminder={(id: string) => {
-                      setReminders(reminders.filter(r => r.id !== id));
-                    }} 
-                  />
-                  <SystemWidget 
-                    isOnline={isOnline} 
-                    batteryLevel={batteryLevel} 
-                  />
-                </div>
-              </motion.div>
+              <DashboardTab 
+                getGreeting={getGreeting}
+                time={time}
+                formatTime={formatTime}
+                formatDate={formatDate}
+                is24Hour={is24Hour}
+                weather={weather}
+                locationName={locationName}
+                isDarkMode={isDarkMode}
+                handleWeatherSearch={handleWeatherSearch}
+                dailyPlan={dailyPlan}
+                handleGeneratePlan={handleGeneratePlan}
+                isFocusRunning={isFocusRunning}
+                focusTime={focusTime}
+                focusType={focusType}
+                startFocusSession={startFocusSession}
+                setActiveTab={handleTabChange}
+                timezones={timezones}
+                globalSearch={globalSearch}
+                stopwatchTime={stopwatchTime}
+                isStopwatchRunning={isStopwatchRunning}
+                startStopwatch={startStopwatch}
+                resetStopwatch={resetStopwatch}
+                formatStopwatch={formatStopwatch}
+                timerSeconds={timerSeconds}
+                timerInput={timerInput}
+                isTimerRunning={isTimerRunning}
+                startTimer={startTimer}
+                resetTimer={resetTimer}
+                setTimerInput={setTimerInput}
+                formatTimer={formatTimer}
+                todos={todos}
+                newTodo={newTodo}
+                addTodo={addTodo}
+                toggleTodo={toggleTodo}
+                deleteTodo={deleteTodo}
+                setNewTodo={setNewTodo}
+                stickyNote={stickyNote}
+                setStickyNote={setStickyNote}
+                reminders={reminders}
+                newReminder={newReminder}
+                setNewReminder={setNewReminder}
+                setReminders={setReminders}
+                isOnline={isOnline}
+                batteryLevel={batteryLevel}
+              />
             )}
 
             {activeTab === 'focus' && (
-              <motion.div 
-                key="focus"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="max-w-4xl mx-auto space-y-8"
-              >
-                <FocusModeTab 
-                  focusTime={focusTime}
-                  isFocusRunning={isFocusRunning}
-                  focusType={focusType}
-                  focusTask={focusTask}
-                  aiSuggestion={aiSuggestion}
-                  onStart={startFocusSession}
-                  onTaskChange={setFocusTask}
-                  formatTimer={formatTimer}
-                  ambientSound={ambientSound}
-                  toggleSound={toggleSound}
-                  sounds={sounds}
-                />
-              </motion.div>
+              <FocusTab 
+                focusTime={focusTime}
+                isFocusRunning={isFocusRunning}
+                focusType={focusType}
+                focusTask={focusTask}
+                aiSuggestion={aiSuggestion}
+                onStart={startFocusSession}
+                onTaskChange={setFocusTask}
+                formatTimer={formatTimer}
+                ambientSound={ambientSound}
+                toggleSound={toggleSound}
+                sounds={sounds}
+              />
             )}
 
             {activeTab === 'planner' && (
-              <motion.div 
-                key="planner"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="max-w-4xl mx-auto space-y-8"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">AI Daily Planner</h2>
-                  <button 
-                    onClick={handleGeneratePlan}
-                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all text-white shadow-lg shadow-blue-500/20"
-                  >
-                    <Sparkles size={18} /> Regenerate Plan
-                  </button>
-                </div>
-                <DailyPlanWidget plan={dailyPlan} onGenerate={handleGeneratePlan} fullView />
-              </motion.div>
+              <PlannerTab 
+                dailyPlan={dailyPlan}
+                handleGeneratePlan={handleGeneratePlan}
+              />
             )}
 
             {activeTab === 'analytics' && (
-              <motion.div 
-                key="analytics"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                <h2 className="text-3xl font-bold tracking-tight">Personal Analytics</h2>
-                <AnalyticsDashboard focusHistory={focusHistory} stats={productivityStats} />
-              </motion.div>
+              <AnalyticsTab 
+                focusHistory={focusHistory}
+                productivityStats={productivityStats}
+              />
             )}
+
             {activeTab === 'clock' && (
-              <motion.div 
-                key="clock"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-colors duration-700 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'}`}
-              >
-                <div className={`absolute inset-0 pointer-events-none z-10 ${isDarkMode ? 'bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)]' : 'bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(255,255,255,0.5)_100%)]'}`} />
-                
-                <div className="absolute top-12 right-12 flex gap-4 z-[110]">
-                  <button 
-                    onClick={toggleFullscreen}
-                    className={`p-4 rounded-full transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white' : 'bg-black/5 hover:bg-black/10 text-slate-600 hover:text-black'}`}
-                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                  >
-                    {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('dashboard')}
-                    className={`p-4 rounded-full transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white' : 'bg-black/5 hover:bg-black/10 text-slate-600 hover:text-black'}`}
-                    title="Exit Focus Mode"
-                  >
-                    <ChevronLeft size={24} />
-                  </button>
-                </div>
-
-                <div className="relative z-20 flex flex-col items-center justify-center w-full h-full p-6 md:p-12 lg:p-24 overflow-hidden">
-                  <div 
-                    className="flex items-center justify-center gap-2 md:gap-4 leading-none select-none transition-all duration-500 ease-out font-black tracking-tighter" 
-                    style={{ 
-                      fontSize: 'min(25vw, 45vh)',
-                      fontFamily: '"Inter", sans-serif'
-                    }}
-                  >
-                    <span className="tabular-nums">
-                      {time.getHours() % (is24Hour ? 24 : 12) || (is24Hour ? 0 : 12)}
-                    </span>
-                    <span className="opacity-20 animate-pulse">:</span>
-                    <span className="tabular-nums">
-                      {time.getMinutes().toString().padStart(2, '0')}
-                    </span>
-                    <span className="hidden xl:inline opacity-20 animate-pulse">:</span>
-                    <span className="hidden xl:inline tabular-nums opacity-40" style={{ fontSize: '0.6em' }}>
-                      {time.getSeconds().toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                  
-                  <motion.div 
-                    initial={{ opacity: 0, y: 40 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
-                    className="mt-12 md:mt-20 flex flex-col items-center gap-8"
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      {!is24Hour && (
-                        <div className={`px-6 py-1.5 rounded-full border ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-500/5 border-blue-500/10 text-blue-600'}`}>
-                          <span className="text-sm md:text-base font-black tracking-[0.8em] uppercase">
-                            {time.getHours() >= 12 ? 'PM' : 'AM'}
-                          </span>
-                        </div>
-                      )}
-                      <p className={`text-2xl md:text-5xl font-extralight tracking-[0.8em] uppercase text-center ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {formatDate(time)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-12 opacity-30">
-                      <div className={`h-px w-20 md:w-40 ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/50 to-transparent' : 'bg-gradient-to-r from-transparent via-black/50 to-transparent'}`} />
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                        <span className={`text-[10px] md:text-xs font-bold uppercase tracking-[2em] whitespace-nowrap ml-[2em] ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                          Focus Active
-                        </span>
-                      </div>
-                      <div className={`h-px w-20 md:w-40 ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/50 to-transparent' : 'bg-gradient-to-r from-transparent via-black/50 to-transparent'}`} />
-                    </div>
-                  </motion.div>
-                </div>
-              </motion.div>
+              <ClockTab 
+                isDarkMode={isDarkMode}
+                toggleFullscreen={toggleFullscreen}
+                isFullscreen={isFullscreen}
+                setActiveTab={handleTabChange}
+                time={time}
+                is24Hour={is24Hour}
+                formatDate={formatDate}
+              />
             )}
 
             {activeTab === 'timezones' && (
-              <motion.div 
-                key="timezones"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold tracking-tight">Global Timezones</h2>
-                  <button 
-                    onClick={addTimezone}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors text-white"
-                  >
-                    <Plus size={18} /> Add Timezone
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {timezones.filter(tz => tz.city.toLowerCase().includes(globalSearch.toLowerCase())).map((tz) => (
-                    <div key={tz.city} className="glass-card p-8 rounded-3xl relative group">
-                      {!tz.isLocal && (
-                        <button 
-                          onClick={() => removeTimezone(tz.city)}
-                          className="absolute top-4 right-4 p-2 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                      <div className="flex justify-between items-start mb-6">
-                        <div>
-                          <h3 className="text-xl font-bold">{tz.city}</h3>
-                          <p className="text-sm text-slate-400">{tz.zone}</p>
-                        </div>
-                        {tz.isLocal && (
-                          <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold uppercase">
-                            Current Location
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-5xl font-mono font-bold tabular-nums mb-2">
-                        {formatTime(time, tz.zone).split(' ')[0]}
-                      </div>
-                      <div className="text-sm text-slate-500">
-                        {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: tz.zone }).format(time)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+              <TimezonesTab 
+                addTimezone={addTimezone}
+                removeTimezone={removeTimezone}
+                timezones={timezones}
+                globalSearch={globalSearch}
+                time={time}
+                formatTime={formatTime}
+              />
             )}
 
             {activeTab === 'tools' && (
@@ -1490,53 +1055,14 @@ export default function App() {
             )}
 
             {activeTab === 'settings' && (
-              <motion.div 
-                key="settings"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="max-w-2xl mx-auto space-y-8"
-              >
-                <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-                <div className="glass-card rounded-3xl overflow-hidden divide-y divide-white/5">
-                  <div className="p-6 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold">Dark Mode</h4>
-                      <p className="text-sm text-slate-400">Switch between light and dark themes</p>
-                    </div>
-                    <button 
-                      onClick={() => setIsDarkMode(!isDarkMode)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-blue-600' : 'bg-slate-600'}`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isDarkMode ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-                  <div className="p-6 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold">24-Hour Format</h4>
-                      <p className="text-sm text-slate-400">Toggle between 12h and 24h time display</p>
-                    </div>
-                    <button 
-                      onClick={() => setIs24Hour(!is24Hour)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${is24Hour ? 'bg-blue-600' : 'bg-slate-600'}`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${is24Hour ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-                  <div className="p-6 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold">Sidebar Collapsed</h4>
-                      <p className="text-sm text-slate-400">Keep the sidebar small by default</p>
-                    </div>
-                    <button 
-                      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${sidebarCollapsed ? 'bg-blue-600' : 'bg-slate-600'}`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${sidebarCollapsed ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
+              <SettingsTab 
+                isDarkMode={isDarkMode}
+                setIsDarkMode={setIsDarkMode}
+                is24Hour={is24Hour}
+                setIs24Hour={setIs24Hour}
+                sidebarCollapsed={sidebarCollapsed}
+                setSidebarCollapsed={setSidebarCollapsed}
+              />
             )}
           </AnimatePresence>
 
@@ -1552,624 +1078,26 @@ export default function App() {
   );
 }
 
-// --- Widget Components ---
 
-function FlipUnit({ value, label, showLabel = true }: { value: number, label?: string, showLabel?: boolean }) {
-  const [prevValue, setPrevValue] = useState(value);
-  const [isFlipping, setIsFlipping] = useState(false);
 
-  useEffect(() => {
-    if (value !== prevValue) {
-      setIsFlipping(true);
-      const timer = setTimeout(() => {
-        setPrevValue(value);
-        setIsFlipping(false);
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-  }, [value, prevValue]);
 
-  const format = (v: number) => v.toString().padStart(2, '0');
 
-  return (
-    <div className="flip-unit-container" onClick={(e) => e.stopPropagation()}>
-      <div className="flip-card">
-        <div className="flip-card-top" data-value={format(value)}></div>
-        <div className="flip-card-bottom" data-value={format(prevValue)}></div>
-        {isFlipping && (
-          <>
-            <div className="flip-card-top-flip" data-value={format(prevValue)}></div>
-            <div className="flip-card-bottom-flip" data-value={format(value)}></div>
-          </>
-        )}
-      </div>
-      {showLabel && label && <span className="flip-unit-label">{label}</span>}
-    </div>
-  );
-}
 
-function StopwatchWidget({ stopwatchTime, isStopwatchRunning, onStart, onReset, formatStopwatch }: any) {
-  return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[300px]">
-      <div className="flex items-center gap-3 mb-6">
-        <StopwatchIcon className="text-blue-500" size={24} />
-        <h3 className="font-bold">Stopwatch</h3>
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center py-4">
-        <div className="text-5xl font-mono tabular-nums mb-8">
-          {formatStopwatch(stopwatchTime)}
-        </div>
-        <div className="flex gap-4">
-          <button 
-            onClick={onStart}
-            className={`px-8 py-3 rounded-2xl font-bold transition-all ${isStopwatchRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20'}`}
-          >
-            {isStopwatchRunning ? 'Stop' : 'Start'}
-          </button>
-          <button 
-            onClick={onReset}
-            className="px-8 py-3 rounded-2xl font-bold bg-white/5 hover:bg-white/10 transition-all"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function TimerWidget({ timerSeconds, timerInput, isTimerRunning, onStart, onReset, onInputChange, formatTimer }: any) {
-  return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[300px]">
-      <div className="flex items-center gap-3 mb-6">
-        <TimerIcon className="text-purple-500" size={24} />
-        <h3 className="font-bold">Countdown Timer</h3>
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center py-4">
-        {isTimerRunning || timerSeconds > 0 ? (
-          <div className="text-5xl font-mono tabular-nums mb-8">
-            {formatTimer(timerSeconds)}
-          </div>
-        ) : (
-          <input 
-            type="text" 
-            value={timerInput}
-            onChange={(e) => onInputChange(e.target.value)}
-            placeholder="MM:SS"
-            className="text-5xl font-mono tabular-nums mb-8 bg-transparent text-center focus:outline-none border-b border-white/10 w-40"
-          />
-        )}
-        <div className="flex gap-4">
-          <button 
-            onClick={onStart}
-            className={`px-8 py-3 rounded-2xl font-bold transition-all ${isTimerRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20'}`}
-          >
-            {isTimerRunning ? 'Pause' : 'Start'}
-          </button>
-          <button 
-            onClick={onReset}
-            className="px-8 py-3 rounded-2xl font-bold bg-white/5 hover:bg-white/10 transition-all"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function TodoWidget({ todos, newTodo, onAdd, onToggle, onDelete, onInputChange }: any) {
-  return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[400px]">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <LayoutDashboard className="text-emerald-500" size={24} />
-          <h3 className="font-bold">Quick Tasks</h3>
-        </div>
-        <span className="text-xs text-slate-400">{todos.filter((t: any) => !t.completed).length} remaining</span>
-      </div>
-      
-      <form onSubmit={onAdd} className="flex gap-2 mb-6">
-        <input 
-          type="text" 
-          value={newTodo}
-          onChange={(e) => onInputChange(e.target.value)}
-          placeholder="Add a task..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-        />
-        <button type="submit" className="p-2 bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors">
-          <Plus size={20} />
-        </button>
-      </form>
 
-      <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-        <AnimatePresence initial={false}>
-          {todos.map((todo: any) => (
-            <motion.div 
-              key={todo.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group"
-            >
-              <input 
-                type="checkbox" 
-                checked={todo.completed}
-                onChange={() => onToggle(todo.id)}
-                className="w-4 h-4 rounded border-white/20 bg-transparent text-emerald-600 focus:ring-emerald-500"
-              />
-              <span className={`flex-1 text-sm ${todo.completed ? 'line-through text-slate-500' : ''}`}>
-                {todo.text}
-              </span>
-              <button 
-                onClick={() => onDelete(todo.id)}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all"
-              >
-                <Trash2 size={14} />
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
 
-function SystemWidget({ isOnline, batteryLevel }: any) {
-  return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col h-[400px]">
-      <div className="flex items-center gap-3 mb-6">
-        <Cpu className="text-orange-500" size={24} />
-        <h3 className="font-bold">System Status</h3>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Network</span>
-            <Wifi size={14} className={isOnline ? 'text-emerald-500' : 'text-red-500'} />
-          </div>
-          <span className="text-lg font-bold">{isOnline ? 'Online' : 'Offline'}</span>
-          <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-            <div className={`h-full transition-all duration-500 ${isOnline ? 'w-full bg-emerald-500' : 'w-0 bg-red-500'}`} />
-          </div>
-        </div>
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Battery</span>
-            <Battery size={14} className={batteryLevel && batteryLevel > 20 ? 'text-emerald-500' : 'text-red-500'} />
-          </div>
-          <span className="text-lg font-bold">{batteryLevel !== null ? `${batteryLevel}%` : 'N/A'}</span>
-          <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-blue-500 transition-all duration-500" 
-              style={{ width: `${batteryLevel || 0}%` }} 
-            />
-          </div>
-        </div>
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2 col-span-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Performance</span>
-            <span className="text-[10px] text-emerald-500 font-bold">OPTIMAL</span>
-          </div>
-          <div className="flex items-end gap-1 h-8">
-            {[40, 70, 45, 90, 65, 80, 50, 85, 60, 75].map((h, i) => (
-              <div 
-                key={i} 
-                className="flex-1 bg-blue-500/50 rounded-t-sm animate-pulse" 
-                style={{ height: `${h}%`, animationDelay: `${i * 0.1}s` }} 
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function DailyPlanWidget({ plan, onGenerate, fullView }: { plan: any, onGenerate: () => void, fullView?: boolean }) {
-  if (!plan) {
-    return (
-      <div className={`glass-card p-8 rounded-[32px] flex flex-col items-center justify-center text-center ${fullView ? 'min-h-[500px]' : 'min-h-[300px]'}`}>
-        <Calendar className="text-blue-500 mb-4 opacity-20" size={48} />
-        <h3 className="text-xl font-bold mb-2">No Daily Plan Yet</h3>
-        <p className="text-sm text-slate-400 mb-6 max-w-xs">Let AI generate a personalized schedule based on your tasks and habits.</p>
-        <button 
-          onClick={onGenerate}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all text-white shadow-lg shadow-blue-500/20"
-        >
-          <Sparkles size={18} /> Plan My Day
-        </button>
-      </div>
-    );
-  }
 
-  return (
-    <div className={`glass-card p-6 sm:p-8 rounded-[32px] flex flex-col ${fullView ? 'min-h-[500px]' : 'min-h-[300px]'}`}>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Calendar className="text-blue-500" size={24} />
-          <h3 className="font-bold">AI Daily Schedule</h3>
-        </div>
-        {!fullView && (
-          <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Today</span>
-        )}
-      </div>
-      
-      <div className={`flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar`}>
-        {plan.map((item: any, i: number) => (
-          <div key={i} className="flex gap-4 group">
-            <div className="flex flex-col items-center">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5" />
-              {i !== plan.length - 1 && <div className="w-px flex-1 bg-white/10 my-1" />}
-            </div>
-            <div className="flex-1 pb-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-black text-slate-500 uppercase tracking-tighter">{item.time}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                  item.activity.toLowerCase().includes('work') ? 'bg-blue-500/10 text-blue-500' :
-                  item.activity.toLowerCase().includes('break') ? 'bg-emerald-500/10 text-emerald-500' :
-                  'bg-white/5 text-slate-400'
-                }`}>
-                  {item.activity.toLowerCase().includes('work') ? 'Focus' : 'Routine'}
-                </span>
-              </div>
-              <h4 className="text-sm font-bold text-slate-200">{item.activity}</h4>
-              {fullView && item.description && (
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{item.description}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-function FocusQuickWidget({ isFocusRunning, focusTime, focusType, onStart, onTabChange }: any) {
-  const format = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
 
-  return (
-    <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col min-h-[300px] relative overflow-hidden group border-none">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent opacity-50 pointer-events-none" />
-      <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Brain className="text-purple-500" size={24} />
-            <h3 className="font-bold">Focus Session</h3>
-          </div>
-          <button onClick={onTabChange} className="text-[10px] font-bold text-purple-500 uppercase hover:underline">Open Full</button>
-        </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="text-5xl sm:text-6xl font-black tracking-tighter tabular-nums mb-4">
-            {format(focusTime)}
-          </div>
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">
-            {focusType === 'work' ? 'Deep Work' : 'Rest Period'}
-          </span>
-          <button 
-            onClick={onStart}
-            className={`w-full py-3 rounded-2xl font-bold transition-all ${
-              isFocusRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-500/20'
-            }`}
-          >
-            {isFocusRunning ? 'Pause Session' : 'Start Focus'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function FocusModeTab({ focusTime, isFocusRunning, focusType, focusTask, aiSuggestion, onStart, onTaskChange, formatTimer, ambientSound, toggleSound, sounds }: any) {
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 glass-card p-6 sm:p-12 rounded-[32px] sm:rounded-[48px] flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[500px]">
-          <div className={`absolute inset-0 opacity-10 transition-colors duration-1000 pointer-events-none ${focusType === 'work' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
-          
-          <div className="relative z-10 w-full max-w-md">
-            <input 
-              type="text" 
-              value={focusTask}
-              onChange={(e) => onTaskChange(e.target.value)}
-              placeholder="What are you focusing on?"
-              className="w-full bg-transparent text-center text-xl sm:text-2xl font-bold placeholder:text-slate-600 focus:outline-none mb-8 sm:mb-12"
-            />
 
-            <div className="relative mb-8 sm:mb-12 flex justify-center">
-              <svg className="w-48 h-48 sm:w-64 sm:h-64 transform -rotate-90">
-                <circle
-                  cx="50%"
-                  cy="50%"
-                  r="45%"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="transparent"
-                  className="text-white/5"
-                />
-                <motion.circle
-                  cx="50%"
-                  cy="50%"
-                  r="45%"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="transparent"
-                  strokeDasharray="283%"
-                  animate={{ strokeDashoffset: `${283 - (283 * focusTime) / (focusType === 'work' ? 25 * 60 : 5 * 60)}%` }}
-                  className={focusType === 'work' ? 'text-blue-500' : 'text-emerald-500'}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl sm:text-6xl font-black tracking-tighter tabular-nums">
-                  {formatTimer(focusTime)}
-                </span>
-                <span className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-[0.4em] mt-2">
-                  {focusType === 'work' ? 'Focus' : 'Break'}
-                </span>
-              </div>
-            </div>
 
-            <div className="flex gap-4">
-              <button 
-                onClick={onStart}
-                className={`flex-1 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl ${
-                  isFocusRunning ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 
-                  (focusType === 'work' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/20')
-                }`}
-              >
-                {isFocusRunning ? 'Pause' : 'Start Session'}
-              </button>
-            </div>
-          </div>
-        </div>
 
-        <div className="space-y-6">
-          <div className="glass-card p-8 rounded-[32px]">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <Music size={20} className="text-purple-500" />
-              Ambient Sounds
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {sounds.map((sound) => (
-                <button
-                  key={sound.id}
-                  onClick={() => toggleSound(sound)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                    ambientSound === sound.mp3 ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-white/5 border-white/5 hover:bg-white/10 text-slate-400'
-                  }`}
-                >
-                  {sound.icon}
-                  <span className="text-[10px] font-bold uppercase tracking-widest">{sound.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <AnimatePresence>
-            {aiSuggestion && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass-card p-8 rounded-[32px] bg-blue-500/5 border-blue-500/20"
-              >
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Sparkles size={20} className="text-blue-500" />
-                  AI Insight
-                </h3>
-                <p className="text-sm text-slate-300 leading-relaxed italic">
-                  "{aiSuggestion}"
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsDashboard({ focusHistory, stats }: { focusHistory: any[], stats: any }) {
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-8 rounded-[32px] flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
-            <Zap size={24} />
-          </div>
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Productivity Score</span>
-          <span className="text-5xl font-black tracking-tighter">85</span>
-          <span className="text-xs text-emerald-500 font-bold mt-2">+12% from last week</span>
-        </div>
-        <div className="glass-card p-8 rounded-[32px] flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 mb-4">
-            <TimerIcon size={24} />
-          </div>
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Focus Time</span>
-          <span className="text-5xl font-black tracking-tighter">12.5h</span>
-          <span className="text-xs text-slate-400 font-bold mt-2">This week</span>
-        </div>
-        <div className="glass-card p-8 rounded-[32px] flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 mb-4">
-            <Flame size={24} />
-          </div>
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Current Streak</span>
-          <span className="text-5xl font-black tracking-tighter">5</span>
-          <span className="text-xs text-slate-400 font-bold mt-2">Days active</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="glass-card p-8 rounded-[32px]">
-          <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
-            <BarChart3 size={24} className="text-blue-500" />
-            Focus History
-          </h3>
-          <div className="space-y-4">
-            {focusHistory.length > 0 ? focusHistory.map((session, i) => (
-              <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <Brain size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold">Focus Session</h4>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">
-                      {session.timestamp?.toDate().toLocaleDateString()} • {session.duration} mins
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-black text-emerald-500">+{session.productivityScore} pts</span>
-                </div>
-              </div>
-            )) : (
-              <div className="py-12 text-center text-slate-600">
-                <BarChart3 size={48} className="mx-auto mb-4 opacity-10" />
-                <p className="text-sm font-medium">No sessions recorded yet</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="glass-card p-8 rounded-[32px] bg-gradient-to-br from-blue-600/10 to-purple-600/10 border-none">
-          <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
-            <Sparkles size={24} className="text-blue-500" />
-            AI Performance Review
-          </h3>
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10">
-              <p className="text-sm text-slate-300 leading-relaxed italic">
-                "Your focus has been exceptionally high during morning sessions. You tend to lose momentum after 3 PM. Consider scheduling your most demanding tasks before noon for maximum efficiency."
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Peak Focus</span>
-                <span className="text-lg font-bold">10:00 AM</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Avg Session</span>
-                <span className="text-lg font-bold">38 mins</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StickyNoteWidget({ stickyNote, onStickyNoteChange }: any) {
-  return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col bg-yellow-500/5 border-yellow-500/20">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-yellow-500" />
-          Sticky Note
-        </h3>
-      </div>
-      <textarea 
-        value={stickyNote}
-        onChange={(e) => onStickyNoteChange(e.target.value)}
-        className="flex-1 bg-transparent border-none resize-none focus:outline-none text-sm leading-relaxed text-slate-300 font-medium placeholder:text-slate-600 min-h-[150px]"
-        placeholder="Type your notes here..."
-      />
-    </div>
-  );
-}
-
-function ReminderWidget({ reminders, newReminder, onNewReminderChange, onAddReminder, onToggleReminder, onDeleteReminder }: any) {
-  return (
-    <div className="glass-card p-6 sm:p-8 rounded-3xl flex flex-col bg-purple-500/5 border-purple-500/20">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-purple-500" />
-          Reminders
-        </h3>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-500 uppercase tracking-wider">
-          {reminders.filter((r: any) => !r.completed).length} Pending
-        </span>
-      </div>
-
-      <div className="flex gap-2 mb-6">
-        <input 
-          type="text" 
-          value={newReminder}
-          onChange={(e) => onNewReminderChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && onAddReminder(newReminder)}
-          placeholder="Set a reminder..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-        />
-        <button 
-          onClick={() => onAddReminder(newReminder)}
-          className="p-2 bg-purple-600 hover:bg-purple-500 rounded-xl transition-colors text-white"
-        >
-          <Plus size={20} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar max-h-[200px]">
-        {reminders.map((reminder: any) => (
-          <div 
-            key={reminder.id}
-            className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 group hover:border-purple-500/30 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => onToggleReminder(reminder.id)}
-                className={`w-5 h-5 rounded-md border transition-all flex items-center justify-center ${
-                  reminder.completed ? 'bg-purple-600 border-purple-600' : 'border-white/20 hover:border-purple-500'
-                }`}
-              >
-                {reminder.completed && <div className="w-2 h-2 bg-white rounded-full" />}
-              </button>
-              <span className={`text-sm transition-all ${reminder.completed ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
-                {reminder.text}
-              </span>
-            </div>
-            <button 
-              onClick={() => onDeleteReminder(reminder.id)}
-              className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-red-500 transition-all"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
-        {reminders.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-slate-600 py-8">
-            <Bell size={32} className="mb-2 opacity-20" />
-            <p className="text-xs font-medium">No reminders set</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // --- Sub-components ---
 
-function SidebarItem({ icon, label, active, collapsed, onClick }: { 
-  icon: React.ReactNode, 
-  label: string, 
-  active?: boolean,
-  collapsed?: boolean,
-  onClick?: () => void
-}) {
-  return (
-    <div 
-      onClick={onClick}
-      className={`sidebar-item ${active ? 'active' : ''} ${collapsed ? 'justify-center' : ''}`}
-    >
-      {icon}
-      {!collapsed && <span>{label}</span>}
-      {active && !collapsed && (
-        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500" />
-      )}
-    </div>
-  );
-}
+
