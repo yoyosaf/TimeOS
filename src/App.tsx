@@ -363,10 +363,10 @@ export default function App() {
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://www.soundjay.com/nature/rain-01.mp3' },
-    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, mp3: 'https://www.soundjay.com/nature/ocean-waves-1.mp3' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://www.soundjay.com/nature/forest-wind-1.mp3' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://www.soundjay.com/misc/sounds/coffee-shop-1.mp3' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2438/2438-preview.mp3' },
+    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/1113/1113-preview.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2428/2428-preview.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2444/2444-preview.mp3' },
   ];
 
   const toggleSound = async (sound: any) => {
@@ -375,33 +375,29 @@ export default function App() {
     const url = sound.mp3;
     const isPlaying = ambientSound === url;
 
-    if (isPlaying) {
-      try {
-        if (playPromiseRef.current) {
+    try {
+      // If something is already playing, stop it first
+      if (playPromiseRef.current) {
+        try {
           await playPromiseRef.current;
+        } catch (e) {
+          // Ignore play promise errors
         }
-      } catch (e) {}
+      }
+      
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setAmbientSound(null);
-    } else {
-      try {
-        if (ambientSound) {
-          try {
-            if (playPromiseRef.current) {
-              await playPromiseRef.current;
-            }
-          } catch (e) {}
-          audioRef.current.pause();
-        }
-
+      
+      if (isPlaying) {
+        // Just stopping the current sound
+        audioRef.current.src = '';
+        setAmbientSound(null);
+      } else {
+        // Playing a new sound
         audioRef.current.src = url;
         audioRef.current.loop = true;
-        audioRef.current.load();
         
         const playPromise = audioRef.current.play();
         playPromiseRef.current = playPromise;
-        
         setAmbientSound(url);
 
         if (playPromise !== undefined) {
@@ -412,10 +408,10 @@ export default function App() {
             }
           });
         }
-      } catch (e) {
-        console.error("Audio setup failed:", e);
-        setAmbientSound(null);
       }
+    } catch (e) {
+      console.error("Audio operation failed:", e);
+      setAmbientSound(null);
     }
   };
 
@@ -713,6 +709,8 @@ export default function App() {
     }
   };
 
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -720,6 +718,7 @@ export default function App() {
       setUserProfile(null);
       setTodos([]);
       setStickyNote('Welcome to TimeOS! Write your notes here...');
+      setShowProfileMenu(false);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -1008,7 +1007,7 @@ export default function App() {
         <audio ref={audioRef} preload="auto" />
         
         {/* --- Top Navbar --- */}
-        <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 bg-white/5 backdrop-blur-xl relative z-50">
+        <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 bg-white/5 backdrop-blur-xl relative z-[60]">
           <div className="flex items-center gap-4 flex-1">
             <button 
               onClick={() => setMobileMenuOpen(true)}
@@ -1064,48 +1063,66 @@ export default function App() {
                     {userProfile?.isPro ? 'Pro Plan' : 'Free Plan'}
                   </span>
                 </div>
-                <div className="relative group">
-                  <div className="flex items-center gap-2 cursor-pointer">
+                <div className="relative">
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  >
                     <img 
                       src={user.photoURL || ''} 
                       alt={user.displayName || ''} 
                       className="w-8 h-8 rounded-full border border-white/10"
                       referrerPolicy="no-referrer"
                     />
-                    <ChevronDown size={14} className="text-slate-500 group-hover:rotate-180 transition-transform" />
+                    <ChevronDown size={14} className={`text-slate-500 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
                   </div>
                   
-                  <div className="absolute top-full right-0 mt-2 w-56 glass-card rounded-2xl p-2 invisible group-hover:visible transition-all shadow-2xl z-50 border border-white/10">
-                    <div className="px-3 py-2 mb-2 border-bottom border-white/5">
-                      <p className="text-xs font-bold truncate">{user.displayName}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
-                    </div>
-                    
-                    {!userProfile?.isPro ? (
-                      <button 
-                        onClick={() => {
-                          if (user) {
-                            updateDoc(doc(db, 'users', user.uid), { isPro: true }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`));
-                          }
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 text-yellow-500 text-xs font-bold hover:bg-yellow-500/20 transition-all mb-1"
-                      >
-                        <Crown size={14} /> Upgrade to Pro
-                      </button>
-                    ) : (
-                      <div className="px-3 py-2 mb-1 flex items-center gap-2 text-yellow-500 bg-yellow-500/5 rounded-xl">
-                        <Crown size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Pro Member</span>
-                      </div>
-                    )}
+                  <AnimatePresence>
+                    {showProfileMenu && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-[90]" 
+                          onClick={() => setShowProfileMenu(false)} 
+                        />
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute top-full right-0 mt-2 w-56 glass-card rounded-2xl p-2 shadow-2xl z-[100] border border-white/10"
+                        >
+                          <div className="px-3 py-2 mb-2 border-bottom border-white/5">
+                            <p className="text-xs font-bold truncate">{user.displayName}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                          </div>
+                          
+                          {!userProfile?.isPro ? (
+                            <button 
+                              onClick={() => {
+                                if (user) {
+                                  updateDoc(doc(db, 'users', user.uid), { isPro: true }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`));
+                                }
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 text-yellow-500 text-xs font-bold hover:bg-yellow-500/20 transition-all mb-1"
+                            >
+                              <Crown size={14} /> Upgrade to Pro
+                            </button>
+                          ) : (
+                            <div className="px-3 py-2 mb-1 flex items-center gap-2 text-yellow-500 bg-yellow-500/5 rounded-xl">
+                              <Crown size={14} />
+                              <span className="text-[10px] font-black uppercase tracking-widest">Pro Member</span>
+                            </div>
+                          )}
 
-                    <button 
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
-                    >
-                      <LogOut size={14} /> Sign Out
-                    </button>
-                  </div>
+                          <button 
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-500/10 text-red-500 text-xs font-bold transition-all"
+                          >
+                            <LogOut size={14} /> Sign Out
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             ) : (
