@@ -127,21 +127,34 @@ export default function App() {
   const [dailyPlan, setDailyPlan] = useState<any>(null);
   const [focusHistory, setFocusHistory] = useState<any[]>([]);
   const [productivityStats, setProductivityStats] = useState<any>(null);
+  const [spotifyPlaylist, setSpotifyPlaylist] = useState('37i9dQZF1DWZeKzbUnY3Yy'); // Lofi Beats default
 
   // --- Ambient Sound State ---
   const [ambientSound, setAmbientSound] = useState<string | null>(null);
+  const [volume, setVolume] = useState(0.5);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2438/2438-preview.mp3' },
-    { id: 'waves', name: 'Waves', icon: <Droplets size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/1113/1113-preview.mp3' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2428/2428-preview.mp3' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2444/2444-preview.mp3' },
+    { id: 'rain', name: 'Midnight Rain', icon: <CloudRain size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' }, // Placeholder for aesthetic music
+    { id: 'waves', name: 'Ocean Waves', icon: <Droplets size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+    { id: 'lofi-1', name: 'Lofi Study', icon: <Coffee size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+    { id: 'lofi-2', name: 'Chill Vibes', icon: <Music size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+    { id: 'forest', name: 'Deep Forest', icon: <Wind size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
+    { id: 'zen', name: 'Zen Garden', icon: <Sparkles size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3' },
   ];
 
-  const toggleSound = async (sound: any) => {
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const toggleSound = async (soundId: string) => {
     if (!audioRef.current) return;
+
+    const sound = sounds.find(s => s.id === soundId);
+    if (!sound) return;
 
     const url = sound.mp3;
     const isPlaying = ambientSound === url;
@@ -994,6 +1007,13 @@ export default function App() {
                 setReminders={setReminders}
                 isOnline={isOnline}
                 batteryLevel={batteryLevel}
+                ambientSound={ambientSound}
+                sounds={sounds}
+                toggleSound={toggleSound}
+                spotifyPlaylist={spotifyPlaylist}
+                setSpotifyPlaylist={setSpotifyPlaylist}
+                volume={volume}
+                setVolume={setVolume}
               />
             )}
 
@@ -1010,6 +1030,10 @@ export default function App() {
                 ambientSound={ambientSound}
                 toggleSound={toggleSound}
                 sounds={sounds}
+                spotifyPlaylist={spotifyPlaylist}
+                setSpotifyPlaylist={setSpotifyPlaylist}
+                volume={volume}
+                setVolume={setVolume}
               />
             )}
 

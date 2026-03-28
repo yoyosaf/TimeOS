@@ -14,7 +14,8 @@ import {
   TodoWidget, 
   StickyNoteWidget, 
   ReminderWidget, 
-  SystemWidget 
+  SystemWidget,
+  MusicWidget
 } from './Widgets';
 
 interface DashboardTabProps {
@@ -62,6 +63,13 @@ interface DashboardTabProps {
   setReminders: (reminders: any[]) => void;
   isOnline: boolean;
   batteryLevel: number | null;
+  ambientSound: string | null;
+  sounds: any[];
+  toggleSound: (sound: any) => void;
+  spotifyPlaylist: string;
+  setSpotifyPlaylist: (id: string) => void;
+  volume: number;
+  setVolume: (v: number) => void;
 }
 
 const DashboardTab: React.FC<DashboardTabProps> = ({
@@ -109,6 +117,13 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
   setReminders,
   isOnline,
   batteryLevel,
+  ambientSound,
+  sounds,
+  toggleSound,
+  spotifyPlaylist,
+  setSpotifyPlaylist,
+  volume,
+  setVolume,
 }) => {
   return (
     <motion.div 
@@ -239,6 +254,15 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
           onDeleteReminder={(id: string) => {
             setReminders(reminders.filter(r => r.id !== id));
           }} 
+        />
+        <MusicWidget 
+          ambientSound={ambientSound}
+          sounds={sounds}
+          toggleSound={toggleSound}
+          spotifyPlaylist={spotifyPlaylist}
+          setSpotifyPlaylist={setSpotifyPlaylist}
+          volume={volume}
+          setVolume={setVolume}
         />
         <SystemWidget 
           isOnline={isOnline} 

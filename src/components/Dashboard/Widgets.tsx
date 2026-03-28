@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sun, Cloud, CloudRain, CloudLightning, MapPin, Search, ChevronDown, 
   Plus, Trash2, LayoutDashboard, Cpu, Wifi, Battery, Calendar, Sparkles,
-  Brain, Music, Zap, Hourglass as TimerIcon, Flame, BarChart3, Bell, Timer as StopwatchIcon
+  Brain, Music, Zap, Hourglass as TimerIcon, Flame, BarChart3, Bell, Timer as StopwatchIcon,
+  Volume2
 } from 'lucide-react';
 
 export function WeatherWidget({ weather, locationName, isDarkMode, onSearch }: { weather: any, locationName: string, isDarkMode: boolean, onSearch: (city: string) => void }) {
@@ -509,6 +510,170 @@ export function SystemWidget({ isOnline, batteryLevel }: any) {
               />
             ))}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MusicWidget({ ambientSound, sounds, toggleSound, spotifyPlaylist, setSpotifyPlaylist, volume, setVolume }: any) {
+  const [activeTab, setActiveTab] = useState<'sounds' | 'spotify'>('sounds');
+  const [customPlaylist, setCustomPlaylist] = useState('');
+
+  const playlists = [
+    { id: '37i9dQZF1DWZeKzbUnY3Yy', name: 'Lofi Beats' },
+    { id: '37i9dQZF1DX8UebIW9XYKy', name: 'Deep Focus' },
+    { id: '37i9dQZF1DX4sWspSfsT7V', name: 'Peaceful Piano' },
+    { id: '37i9dQZF1DX3Ogo9pFvFYv', name: 'Ambient Chill' },
+  ];
+
+  const handleCustomPlaylist = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customPlaylist.includes('playlist/')) {
+      const id = customPlaylist.split('playlist/')[1].split('?')[0];
+      setSpotifyPlaylist(id);
+      setCustomPlaylist('');
+    } else if (customPlaylist.length > 10) {
+      setSpotifyPlaylist(customPlaylist);
+      setCustomPlaylist('');
+    }
+  };
+
+  return (
+    <div className="glass-card p-6 sm:p-8 rounded-[32px] flex flex-col min-h-[450px] relative overflow-hidden group border-none">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 to-transparent opacity-50 pointer-events-none" />
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Music className="text-emerald-500" size={24} />
+            <h3 className="font-bold">Focus Audio</h3>
+          </div>
+          <div className="flex bg-white/5 rounded-xl p-1">
+            <button 
+              onClick={() => setActiveTab('sounds')}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'sounds' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              Sounds
+            </button>
+            <button 
+              onClick={() => setActiveTab('spotify')}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'spotify' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              Spotify
+            </button>
+          </div>
+        </div>
+
+        {/* Volume Control */}
+        <div className="flex items-center gap-4 mb-6 px-4 py-3 bg-white/5 rounded-2xl border border-white/5">
+          <Volume2 size={16} className="text-slate-400" />
+          <input 
+            type="range" 
+            min="0" 
+            max="1" 
+            step="0.01" 
+            value={volume} 
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="flex-1 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+          />
+          <span className="text-[10px] font-mono text-slate-500 w-8">{Math.round(volume * 100)}%</span>
+        </div>
+
+        <div className="flex-1">
+          <AnimatePresence mode="wait">
+            {activeTab === 'sounds' ? (
+              <motion.div 
+                key="sounds"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="grid grid-cols-2 gap-3"
+              >
+                {sounds.map((sound: any) => (
+                  <button
+                    key={sound.id}
+                    onClick={() => toggleSound(sound.id)}
+                    className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${
+                      ambientSound === sound.mp3 
+                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-500' 
+                        : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                    }`}
+                  >
+                    {sound.icon}
+                    <span className="text-xs font-bold">{sound.name}</span>
+                    {ambientSound === sound.mp3 && (
+                      <div className="ml-auto flex gap-0.5">
+                        <div className="w-0.5 h-2 bg-emerald-500 animate-bounce" style={{ animationDelay: '0.1s' }} />
+                        <div className="w-0.5 h-3 bg-emerald-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                        <div className="w-0.5 h-2 bg-emerald-500 animate-bounce" style={{ animationDelay: '0.3s' }} />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="spotify"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="flex flex-col h-full space-y-4"
+              >
+                <div className="flex flex-wrap gap-2">
+                  {playlists.map((pl) => (
+                    <button
+                      key={pl.id}
+                      onClick={() => setSpotifyPlaylist(pl.id)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${
+                        spotifyPlaylist === pl.id 
+                          ? 'bg-emerald-600 text-white' 
+                          : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                      }`}
+                    >
+                      {pl.name}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="flex-1 min-h-[200px] rounded-2xl overflow-hidden bg-black/20 relative">
+                  <iframe 
+                    src={`https://open.spotify.com/embed/playlist/${spotifyPlaylist}?utm_source=generator&theme=0`} 
+                    width="100%" 
+                    height="100%" 
+                    frameBorder="0" 
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                    loading="lazy"
+                    title="Spotify Playlist"
+                    className="relative z-10"
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-slate-900/50 backdrop-blur-sm z-0">
+                    <p className="text-xs text-slate-400 mb-4">If the player doesn't load, you may need to log in to Spotify in this browser.</p>
+                    <a 
+                      href={`https://open.spotify.com/playlist/${spotifyPlaylist}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all"
+                    >
+                      Open in Spotify
+                    </a>
+                  </div>
+                </div>
+
+                <form onSubmit={handleCustomPlaylist} className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={customPlaylist}
+                    onChange={(e) => setCustomPlaylist(e.target.value)}
+                    placeholder="Paste Spotify Playlist URL..."
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  />
+                  <button type="submit" className="px-4 py-2 bg-emerald-600 rounded-xl text-[10px] font-bold hover:bg-emerald-700 transition-colors">
+                    Load
+                  </button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
