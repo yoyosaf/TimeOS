@@ -74,6 +74,7 @@ import {
   FirebaseUser
 } from './firebase';
 import { generateDailyPlan, getFocusSuggestion, getProductivityScore } from './services/aiService';
+import ToolsTab from './components/Tools/ToolsTab';
 
 // --- Types ---
 interface Timezone {
@@ -438,6 +439,23 @@ export default function App() {
   // --- System Info State ---
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/Tools' || path === '/tools') {
+      setActiveTab('tools');
+    }
+  }, []);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'tools') {
+      window.history.pushState({}, '', '/Tools');
+    } else {
+      window.history.pushState({}, '', '/');
+    }
+    setMobileMenuOpen(false);
+  };
 
   // --- Weather State ---
   const [weather, setWeather] = useState<any>(null);
@@ -929,56 +947,56 @@ export default function App() {
                 label="Dashboard" 
                 active={activeTab === 'dashboard'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('dashboard')}
               />
               <SidebarItem 
                 icon={<Brain size={20} />} 
                 label="Focus Mode" 
                 active={activeTab === 'focus'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('focus'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('focus')}
               />
               <SidebarItem 
                 icon={<Calendar size={20} />} 
                 label="Daily Planner" 
                 active={activeTab === 'planner'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('planner'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('planner')}
               />
               <SidebarItem 
                 icon={<BarChart3 size={20} />} 
                 label="Analytics" 
                 active={activeTab === 'analytics'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('analytics')}
               />
               <SidebarItem 
                 icon={<Clock size={20} />} 
                 label="Clock" 
                 active={activeTab === 'clock'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('clock'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('clock')}
               />
               <SidebarItem 
                 icon={<Globe size={20} />} 
                 label="Timezones" 
                 active={activeTab === 'timezones'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('timezones'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('timezones')}
               />
               <SidebarItem 
                 icon={<TimerIcon size={20} />} 
                 label="Tools" 
                 active={activeTab === 'tools'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('tools'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('tools')}
               />
               <SidebarItem 
                 icon={<Settings size={20} />} 
                 label="Settings" 
                 active={activeTab === 'settings'} 
                 collapsed={sidebarCollapsed && !isMobile}
-                onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
+                onClick={() => handleTabChange('settings')}
               />
             </nav>
 
@@ -1468,30 +1486,7 @@ export default function App() {
             )}
 
             {activeTab === 'tools' && (
-              <motion.div 
-                key="tools"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-8"
-              >
-                <StopwatchWidget 
-                  stopwatchTime={stopwatchTime} 
-                  isStopwatchRunning={isStopwatchRunning} 
-                  onStart={startStopwatch} 
-                  onReset={resetStopwatch} 
-                  formatStopwatch={formatStopwatch}
-                />
-                <TimerWidget 
-                  timerSeconds={timerSeconds} 
-                  timerInput={timerInput} 
-                  isTimerRunning={isTimerRunning} 
-                  onStart={startTimer} 
-                  onReset={resetTimer} 
-                  onInputChange={setTimerInput} 
-                  formatTimer={formatTimer}
-                />
-              </motion.div>
+              <ToolsTab />
             )}
 
             {activeTab === 'settings' && (
