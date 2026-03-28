@@ -136,10 +136,10 @@ export default function App() {
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3527873c1.mp3' },
-    { id: 'fireplace', name: 'Fireplace', icon: <Flame size={18} />, mp3: 'https://cdn.pixabay.com/audio/2021/09/06/audio_448283669d.mp3' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://cdn.pixabay.com/audio/2022/03/15/audio_732296169d.mp3' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://www.soundjay.com/nature/sounds/rain-01.mp3' },
+    { id: 'fireplace', name: 'Fireplace', icon: <Flame size={18} />, mp3: 'https://www.soundjay.com/ambient/sounds/fireplace-1.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://www.soundjay.com/nature/sounds/forest-1.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://www.soundjay.com/ambient/sounds/coffee-shop-1.mp3' },
   ];
 
   useEffect(() => {
@@ -176,7 +176,9 @@ export default function App() {
       } else {
         // Playing a new sound
         audioRef.current.src = url;
+        audioRef.current.load();
         audioRef.current.loop = true;
+        audioRef.current.volume = volume;
         
         const playPromise = audioRef.current.play();
         playPromiseRef.current = playPromise;
@@ -824,7 +826,15 @@ export default function App() {
 
       {/* --- Main Content --- */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <audio ref={audioRef} preload="auto" />
+        <audio 
+          ref={audioRef} 
+          preload="auto" 
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            console.error("Audio playback error:", e);
+            setAmbientSound(null);
+          }}
+        />
         
         {/* --- Top Navbar --- */}
         <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 bg-white/5 backdrop-blur-xl relative z-[60]">
