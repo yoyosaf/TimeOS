@@ -136,12 +136,10 @@ export default function App() {
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Midnight Rain', icon: <CloudRain size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' }, // Placeholder for aesthetic music
-    { id: 'waves', name: 'Ocean Waves', icon: <Droplets size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-    { id: 'lofi-1', name: 'Lofi Study', icon: <Coffee size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-    { id: 'lofi-2', name: 'Chill Vibes', icon: <Music size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
-    { id: 'forest', name: 'Deep Forest', icon: <Wind size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
-    { id: 'zen', name: 'Zen Garden', icon: <Sparkles size={18} />, mp3: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2438/2438-preview.mp3' },
+    { id: 'fireplace', name: 'Fireplace', icon: <Flame size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2439/2439-preview.mp3' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2428/2428-preview.mp3' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://assets.mixkit.co/active_storage/sfx/2444/2444-preview.mp3' },
   ];
 
   useEffect(() => {
