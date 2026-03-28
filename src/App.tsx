@@ -136,10 +136,10 @@ export default function App() {
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const sounds = [
-    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://www.soundjay.com/nature/sounds/rain-01.mp3' },
-    { id: 'fireplace', name: 'Fireplace', icon: <Flame size={18} />, mp3: 'https://www.soundjay.com/ambient/sounds/fireplace-1.mp3' },
-    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://www.soundjay.com/nature/sounds/forest-1.mp3' },
-    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://www.soundjay.com/ambient/sounds/coffee-shop-1.mp3' },
+    { id: 'rain', name: 'Rain', icon: <CloudRain size={18} />, mp3: 'https://actions.google.com/sounds/v1/ambiences/rain_heavy_loud.ogg' },
+    { id: 'fireplace', name: 'Fireplace', icon: <Flame size={18} />, mp3: 'https://actions.google.com/sounds/v1/ambiences/fireplace_crackling.ogg' },
+    { id: 'forest', name: 'Forest', icon: <Wind size={18} />, mp3: 'https://actions.google.com/sounds/v1/ambiences/forest_ambience.ogg' },
+    { id: 'cafe', name: 'Cafe', icon: <Coffee size={18} />, mp3: 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg' },
   ];
 
   useEffect(() => {
